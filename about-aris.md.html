@@ -1,0 +1,88 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Aris Renderer Quick Start**
+
+Aris is an educational path tracer written in Python with PyTorch. It's designed to make it easy to integrate path tracing with deep learning.
+
+This document describes the design of Aris, how it works, and what you need to understand to start extending it.
+
+# Before we start
+
+Make sure you understand the basics of Python and PyTorch tensors. In this project we use PyTorch tensors to represent almost all of our data for consistency. For example,
+
+- The colors of `N` pixels are stored in an `(N, 3)` tensor, because each color has three channels (RGB).
+- `N` rays are represented with two `(N, 3)` tensors, one for origins (usually named `rays_o` in code) and the other for directions (`rays_d`).
+- When we cast `N` rays in the scene, we obtain an `(N, 3)` tensor of hit points, an `(N, 3)` tensor of normals, and an `(N,)` mask tensor indicating which rays actually hit something.
+
+Did you notice that we've been talking about `N` pixels, rays, etc., instead of "a pixel"? That's because in PyTorch (and most deep learning methods), the methodology is to process data in _batches_. We'll see concrete examples in the following text.
+
+!!! INFO
+    For simplicity, we tend to use `(N, channels of data)` shapes in our code. For example, when we render an image, it is usually an `(H, W)` grid of data; that is, the colors have shape `(H, W, 3)` and the pixel coordinates have shape `(H, W, 2)`. In this case, we first reshape the coordinates to `(H*W, 2)` and obtain colors as an `(H*W, 3)` tensor.
+
+# Overview
+
+Open the file `render.py`, and take a look at the `main` function. It roughly does three things:
+
+- Configure the **integrator**. An integrator predicts colors of rays shot towards the scene, often by computing some numerical integrations (thus its name).
+- Configure the **scene**, which contains all the information needed for rendering, including:
+  - the geometry (usually meshes)
+  - BRDF functions associated of each mesh
+  - a camera
+  - the emitters (light sources) in the scene
+  - optionally, an environment map
+- Render the image in blocks. It generates all the pixel coordinates of the scene (from `x=0, y=0` to `x=width-1, y=height-1`), splits them into blocks, and render one block at a time with the `render_block` function.
+
+The `render_block` function consists of four steps:
+
+- Given a block of `(N, 2)` pixel coordinates, expand them to `(N*spp, 2)` coordinates (`spp` means Samples Per Pixel). We render every pixel `spp` times to reduce variance, and each sample is slightly off the pixel center for anti aliasing.
+- The **camera** in the scene converts pixel locations to rays in world space
+- The integrator predicts colors of all rays, using the **geometry**, **BRDF functions**, and **emitters**
+- The colors are averaged per pixel from `(N*spp, 3)` to `(N, 3)`
+
+Let's take a look at the components in more details.
+
+## Camera
+
+Aris ships with a perspective camera (`aris/camera/perspective.py`). Take a look at how it converts pixel coordinates to rays by first generating camera-space rays, and then projecting them to the world space.
+
+It's important that you understand the tensor operations in this class. Use it as a real-world tutorial of batch operations in PyTorch. In particular, pay attention to the comments about the shapes for matrix multiplications (`@`).
+
+## Geometry
+
+A scene only has one `Geometry` instance (`aris/geometry/__init__.py`). It has a `ray_intersect` interface that casts rays in the scene and returns a `GeometryOutput` instance. A geometry can have one or more _primitives_, each with its own BRDF function. The `brdf_i` tensor in `GeometryOutput` indicates which primitive each ray hits, so the integrator knows which BRDFs to sample from.
+
+For the assignments we mainly use the `MeshGeometry` class, whose primitives are triangle meshes. You don't have to worry about its details.
+
+## BRDF
+
+Each geometry primitive has an associated BRDF function, defined in `aris/brdf/__init__.py`, which has two interfaces: `sample` and `eval`. You'll learn more about the details in assignment 2.
+
+## Emitter
+
+In Aris, every geometry primitive can optionally be specified as a light source. You'll use these in assignment 3 and 4 so feel free to skip them for now.
+
+
+# The normals integrator
+
+Open `aris/integrator/normals.py`. It represents a very simple integrator that:
+
+- Cast rays in the scene
+- Set the normals of the hit points as the returned color
+
+This integrator demonstrates how to use the scene geometry.
+
+# Configuration
+
+Aris uses [Hydra](https://hydra.cc/docs/intro/) to configure renderings, so make sure you follow the quick start guide to understand how it works. Check the `yaml` files in the `config` folder as well.
+
+## Debugging
+
+The following config options may be helpful when you're debugging:
+
+- `scale=0.5`, `scale=0.25` reduces image size for faster rendering
+- `spp=16` reduces `spp` for faster rendering
+- `gui=true` opens a window to show rendering progress
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>

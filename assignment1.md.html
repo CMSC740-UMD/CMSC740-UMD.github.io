@@ -1,0 +1,257 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Assignment 1**
+
+_Advanced Computer Graphics (CMSC740), Fall 2022_
+
+In the first assignment you'll:
+
+- Setup your local environment and download the skeleton code.
+- Familiarize yourself with the codebase and implement two simple components: a depths integrator and a camera
+
+
+
+# 1. Local environment setup
+
+## Python environment
+
+Aris requires `Python 3.9`. You can get it in different ways, but the recommended method is:
+
+- Setup a [Conda environment](https://docs.conda.io/en/latest/miniconda.html)
+  - **Highly recommended** for Windows users, also recommended for macOS and Linux users
+  - First time: `conda create --name aris python=3.9`
+  - To start working: `conda activate aris`
+
+Students who *already have their favorite Python environment managers* can continue to use those.
+In principle, you're free to setup or reuse any environment, as long as you can install all the required packages and work on the assignments. However, we can only help with Conda setups.
+
+!!! WARNING
+    Do not use Python 3.10. Many libraries do not support it yet.
+
+Within the Python environment, install the following packages:
+
+- [PyTorch](https://pytorch.org/get-started/locally/)
+  - *GPU is not necessary.*
+  - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code much faster.
+  - Starting from assignment 3, you'll get access to a cluster with GPUs available. Details to be announced.
+- OpenEXR
+  - Conda users, install [openexr](https://anaconda.org/conda-forge/openexr) and [openexr-python](https://anaconda.org/conda-forge/openexr-python) (see commands in links).
+  - Non-conda users, the Python binding can be installed with `pip install OpenEXR`. Note, it also requires the actual library be available on your system.
+    - Mac users, install with [Homebrew](https://formulae.brew.sh/formula/openexr)
+    - Linux users, install `libopenexr-dev`
+- Install these with `pip install`, even if you're using Conda
+  - [hydra-core](https://pypi.org/project/hydra-core/)
+  - [pillow](https://pypi.org/project/Pillow/)
+  - [opencv-python](https://pypi.org/project/opencv-python/)
+  - [open3d](https://pypi.org/project/open3d/)
+  - [tqdm](https://pypi.org/project/tqdm/)
+  - [plotly](https://pypi.org/project/plotly/)
+- Run the following commands:
+  ```bash
+  pip uninstall ipywidgets
+  pip install ipywidgets==7.7.2
+  ```
+
+To check your installations, try the following and make sure there isn't any `ImportError`:
+
+```
+$ python
+>>> import torch
+>>> import OpenEXR
+>>> import cv2
+>>> import tqdm
+>>> import open3d
+>>> import hydra
+>>> import plotly
+```
+
+## Clone the code
+
+Our code is provided as a [Git](https://git-scm.com/) repository, hosted on GitHub.
+Clone the skeleton code and **checkout your own branch** following these commands:
+
+```bash
+git clone https:// aris-renderer
+cd aris-renderer
+git checkout -b working
+```
+
+!!! WARNING
+    Do not create a Fork on Github. Forks are public and put you in risk of academic dishonesty.
+
+It's important that you work on your own branch. We may need to update the skeleton later, and the recommended workflow is that you update the `origin/master` branch and merge the changes to your own branch.
+
+It's also recommended that you create a **private** repository, and set it as a separate remote in your local repository. You can then sync your `working` branch to backup your work or switch between multiple machines. Refer to [this guide](https://git-scm.com/book/en/v2/Git-Basics-Working-with-Remotes) about remotes.
+
+Once you setup VSCode, you can also install a Git extension (such as `Git Graphs`) to make your life managing remotes and merges easier.
+
+## Download Data
+
+Due to its size, the mesh and environment data is not included in the git repository. Download them from [Google Drive](https://drive.google.com/file/d/1E4bdOgKh4r8o94plEn68HpNRod1W9wMd/view?usp=sharing).
+
+After extracting your folder should look like:
+
+```plain
+.vscode/
+aris/
+config/
+data/
+  environments/
+  meshes/
+render.py
+(...other files)
+```
+
+## Render an image
+
+You are now ready to render an image! Run these commands to verify that you have completed environment setup successfully:
+
+```bash
+python render.py scene=cbox
+python render.py scene=ajax_simple
+```
+
+You'll find the outputs in `outputs/[date]/[time]/output.png`. They should look like these:
+
+![cbox-normals](images/a1/cbox-normals.png height="400px") ![ajax-normals](images/a1/ajax-normals.png height="400px")
+
+## Visual Studio Code
+
+!!! INFO
+    While using VSCode is recommended, it's not required. Feel free to use any Python IDE you are already used to.
+
+Before you start editing code, you need to also install an editor. The recommended and supported development environment in this class is [Visual Studio Code](https://code.visualstudio.com/). In fact, Aris also include a bunch of VSCode configurations (in the `.vscode` folder) to help you code. After installing VSCode, do the following:
+
+- Install the `Python` extension.
+- Open the `aris-renderer` folder with VSCode.
+- Open `render.py` from the left (explorer) panel.
+- On the bottom-left corner, you'll probably see a Python interpreter found by VSCode (something like `3.9.12`). Click on it, and choose `Python 3.9.12 ('aris')` from the dropdown, i.e. the environment you've prepared in the previous steps.
+- Install `pylint` when you see a prompt.
+- Press `Shift+Alt+F` (`Shift+Opt+F` on mac). Install `autopep8` following the prompt.
+
+From time to time, format your code with `Shift+Alt(Opt)+F` and organize your imports with `Shift+Alt(Opt)+O` (letter `O`). This makes it easier for you and us to read code and spot potential bugs.
+
+
+# 2. Getting familiar with Aris
+
+## Python and PyTorch
+
+Python and PyTorch are the most popular tools in many research areas today, including graphics, vision, NLP, and more.
+We developed Aris and this class in Python so that you can easily integrate deep learning methods in PyTorch and obtain cool results (in assignment 5 and your project).
+
+If you're not already familiar with Python, there are many tutorials online. At the minimum, understand the following:
+
+- Basic syntax, variables, control flows
+- Functions
+- Common data structures: lists, dicts, tuples
+- Classes and inheritance
+- Package imports
+
+For PyTorch, you'll only need the concepts of Tensors and their operations for the first four assignments; see the [Official tutorial](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html). You will need the rest of the tutorial for assignment 5, when you'll actually train something.
+
+The [PyTorch documentation](https://pytorch.org/docs/stable/torch.html) is a useful reference to the large number of functions that PyTorch provides, mostly under `torch.*` and `torch.nn.functional.*`, such as:
+
+- Creating tensors filled with zeros, ones, or random values from uniform / Gaussian distributions
+- Sum a tensor along a dimension
+- Concatenate and stack tensors
+- Normalize each of the `N` vectors in a `(N, 3)` tensor
+
+_Indexing_ the tensors is also very important. PyTorch tensors are similar to Numpy arrays in this context so most of [this Numpy tutorial](https://numpy.org/doc/stable/user/basics.indexing.html) works with PyTorch as well.
+
+!!! NOTE
+    VSCode has built-in jupyter notebook support. You can create a `playground.ipynb` to play with PyTorch, quickly test some functions, or debug your code.
+
+### PyTorch practices
+
+Do the following practices if PyTorch is new to you, without writing any loops.
+
+- Create this `(3, 3)` tensor. (1 line except for printing)
+  ```python
+  tensor([[1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9]])
+  ```
+- Create a uniformly random `(10,)` tensor, get the indices and values of the items smaller than 0.5. (3 lines)
+  ```python
+  a = tensor([0.4079, 0.6167, 0.0590, 0.3589, 0.0748, 0.9924, 0.6027, 0.5810, 0.7485, 0.5522])
+  b = tensor([0, 2, 3, 4])
+  c = tensor([0.4079, 0.0590, 0.3589, 0.0748])
+  ```
+- Create a uniformly random `(10,)` tensor, set all items greater than 0.5 to zeros. (2 lines)
+  ```python
+  tensor([0.8141, 0.7350, 0.2277, 0.4472, 0.7580, 0.9014, 0.1368, 0.6306, 0.3223, 0.9906])
+  tensor([0.0000, 0.0000, 0.2277, 0.4472, 0.0000, 0.0000, 0.1368, 0.0000, 0.3223, 0.0000])
+  ```
+- Create a random `(3, 3)` tensor $M$ and a `(10, 3)` tensor $V$, compute a `(10, 3)` $Y$ such that $Y[i]=M V[i]$. That is, if we view $V$ and $Y$ both as 10 vectors in 3D, the $i$-th vector of $Y$ is the matrix multiplication of $M$ and the $i$-th vector of $V$. (3 lines)
+  ```python
+  M = tensor([[0.4244, 0.0574, 0.0552],
+          [0.7129, 0.7412, 0.5561],
+          [0.5477, 0.7566, 0.1634]])
+  V = tensor([[0.3869, 0.3227, 0.7142], ...])
+  Y = tensor([[0.2222, 0.9122, 0.5728], ...])
+  ```
+
+## Aris design and concepts
+
+See [About Aris](about-aris.md.html) while browsing the code. Make sure you understand:
+
+- The rendering pipeline in Aris
+- How the normals integrator works
+- How the perspective camera works
+
+Ask any questions you have on Piazza or during office hours.
+
+# 3. Simple extensions to Aris
+
+!!! NOTE
+    Sanity checks: each of the following task requires only 5~10 lines of code and _no loops_. If you find yourself writing loops, step back and rethink about batch operations.
+
+## Depths integrator
+
+Complete `aris/integrator/depths.py`, which should look similar to `normals`, but:
+
+- Instead of using normals as colors, use the _inverse of depths_ ($1/t$) where the rays hit, and zeros for rays that go into the void.
+- Depths are defined as the $t$ in $\textbf{p}=\textbf{o}+t\textbf{d}$, where $(\textbf{o}, \textbf{d})$ specifies the ray and $\textbf{p}$ is the intersection point.
+- Note: depths are _not_ Euclidean distances between $\textbf{o}$ and $\textbf{p}$, because $\textbf{d}$ is not normalized for perspective camera.
+
+Render two depths images with the following commands:
+
+```
+python render.py scene=cbox integrator=depths save_exr=true
+python render.py scene=ajax_simple integrator=depths save_exr=true
+```
+
+The png files should look like these:
+
+![cbox-depths](images/a1/cbox-depths.png height="400px") ![ajax-depths](images/a1/ajax-depths.png height="400px")
+
+You can view the exr files with [tev](https://github.com/Tom94/tev). Zoom in to see the raw values.
+
+## Thin lens camera
+
+![whitted-front](images/a1/cbox-whitted-focus-front.png height="200px") ![whitted-back](images/a1/cbox-whitted-focus-back.png height="200px") ![path-front](images/a1/cbox-path-focus-front.png height="200px") ![path-back](images/a1/cbox-path-focus-back.png height="200px")
+
+_Above: examples of the cbox scene rendered with whitted style tracer (left) and path tracer (right). You'll implement the integrators in assignment 3 and 4._
+
+The perspective camera Aris has is an idea pinhole camera. In this exercise, you'll extend it to produce depth-of-field effects, as shown above.
+
+The theory can be found in [this section of the PBR book](https://www.pbr-book.org/3ed-2018/Camera_Models/Projective_Camera_Models#TheThinLensModelandDepthofField).
+
+Complete `aris/camera/thin_lens.py`. A skeleton is already prepared for you - the `ThinLenseCamera` includes an instance of the `PerspectiveCamera` and stores two additional parameters: `aperture` and `focal_distance`. Follow the theory to complete the `image_to_rays` function, but note the following:
+
+- The PBR book uses a function `ConcentricSampleDisk` that samples points uniformly on a 2D disk. In your code, simply sample points uniformly on a 2D square from $(-1,-1)$ to $(1,1)$. See [torch.rand](https://pytorch.org/docs/stable/generated/torch.rand.html).
+
+Render two images of `cbox` with different focal distances:
+
+```
+python render.py scene=cbox integrator=depths scene.camera.name=thin +scene.camera.config.aperture=0.3 +scene.camera.config.focal_distance=4.9 spp=256
+python render.py scene=cbox integrator=depths scene.camera.name=thin +scene.camera.config.aperture=0.3 +scene.camera.config.focal_distance=5.59 spp=256
+```
+
+Your output should look like these:
+
+![depths-front](images/a1/cbox-depths-focus-front.png height="400px") ![depths-back](images/a1/cbox-depths-focus-back.png height="400px")
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
