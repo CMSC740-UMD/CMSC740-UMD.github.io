@@ -35,12 +35,13 @@ Within the Python environment, install the following packages:
   - *GPU is not necessary.*
   - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code much faster.
   - Starting from assignment 3, you'll get access to a cluster with GPUs available. Details to be announced.
-- OpenEXR
-  - Conda users, install [openexr](https://anaconda.org/conda-forge/openexr) and [openexr-python](https://anaconda.org/conda-forge/openexr-python) (see commands in links).
-  - Non-conda users, the Python binding can be installed with `pip install OpenEXR`. Note, it also requires the actual library be available on your system.
+- OpenEXR (native library)
+  - Conda users, install [openexr](https://anaconda.org/conda-forge/openexr)
+  - Non-conda users
     - Mac users, install with [Homebrew](https://formulae.brew.sh/formula/openexr)
     - Linux users, install `libopenexr-dev`
 - Install these with `pip install`, even if you're using Conda
+  - [OpenEXR](https://pypi.org/project/OpenEXR/) (Python binding)
   - [hydra-core](https://pypi.org/project/hydra-core/)
   - [pillow](https://pypi.org/project/Pillow/)
   - [opencv-python](https://pypi.org/project/opencv-python/)
