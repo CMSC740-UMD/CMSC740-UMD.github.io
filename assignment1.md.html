@@ -36,14 +36,18 @@ Within the Python environment, install the following packages:
   - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code much faster.
   - Starting from assignment 3, you'll get access to a cluster with GPUs available. Details to be announced.
 - OpenEXR (native library)
-  - Conda users, install [openexr](https://anaconda.org/conda-forge/openexr)
-  - Non-conda users
-    - Mac users, install with [Homebrew](https://formulae.brew.sh/formula/openexr)
-    - Linux users, install `libopenexr-dev`
+  - Conda users (_except_ Mac users), install [openexr](https://anaconda.org/conda-forge/openexr)
+  - Mac users (Conda or not), install with [Homebrew](https://formulae.brew.sh/formula/openexr)
+  - Linux non-Conda users, install `libopenexr-dev`
 - OpenEXR (Python binding)
   - Windows users, use Conda to install [openexr-python](https://anaconda.org/conda-forge/openexr-python)
-  - Mac (arm) users, use `pip install OpenEXR`, even if you're using Conda
-  - Mac (x86) users, either should work
+  - Mac users, run these commands, even if you're using Conda:
+    ```bash
+    export CPPFLAGS="-I/opt/homebrew/include/OpenEXR -I/opt/homebrew/include/Imath"
+    export LDFLAGS="-L/opt/homebrew/lib/OpenEXR"
+    pip install OpenEXR
+    ```
+    - Note: this assumes that your Homebrew is in the default location. Modify the paths as needed.
 - Install these with `pip install`, even if you're using Conda
   - [hydra-core](https://pypi.org/project/hydra-core/)
   - [pillow](https://pypi.org/project/Pillow/)
