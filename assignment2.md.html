@@ -10,7 +10,7 @@ _Advanced Computer Graphics (CMSC740), Fall 2022_
 
 
 !!! NOTE
-    **Before you start**, fetch the latest changes from the [Git repository](https://github.com/CMSC740-Fall22/aris-renderer-student), and merge them into your working branch. If you use VSCode, you can do this with a GUI after installing an extension. Below is an example with the Git Graph extension. Remember to fetch and merge the _latest_ commit from `origin/master`.
+    **Before you start**, fetch the latest changes from the [Git repository](https://github.com/CMSC740-Fall22/aris-renderer-student), and merge them into your working branch. If you use VSCode, you can do this with a GUI after installing an extension. Below is an example with the [Git Graph](https://marketplace.visualstudio.com/items?itemName=mhutchie.git-graph) extension. Remember to fetch and merge the _latest_ commit from `origin/master`.
 
 ![Merge origin/master into your working branch](images/a2/git-example.png width="200px")
 
@@ -21,20 +21,19 @@ In the second assignment you'll:
 
 # 1. Distribution Transformation
 
-In rendering, we often need random samples from different distributions: in a square, in a circle, on a sphere, etc. However, built-in functions in most systems and libraries only generate samples in uniform or normal distributions. Therefore, we have to transform samples from the given distributions to the desired ones.
+In rendering, we often need random samples from various non-uniform probability distributions over different domains, such as squares, circles, spheres, or hemispheres etc. However, built-in functions in most systems and libraries only generate samples from uniform or normal distributions, and over (n-dimensional) cubes. Therefore, we have to transform samples from the given distributions (typically a uniform distribution over a 2D square, in our case) to the desired ones (non-uniform distribution over a desired domain such as a circle or sphere).
 
-For example, in Assignment 1, you used `torch.rand` to generate uniformly distributed points on the square from $[0, 0]$ to $[1, 1]$. You then transformed them to a uniform distribution on a larger square from $[-1, -1]$ to $[1, 1]$.
-For this assignment, you'll complete functions that tranform the points on the small square to a variety of other distributions.
+For example, in Assignment 1, you used `torch.rand` to generate uniformly distributed points on the square from $[0, 0]$ to $[1, 1]$. You then transformed them to a uniform distribution on a larger square from $[-1, -1]$ to $[1, 1]$. For this assignment, you will complete functions that tranform uniformly distributed points on the unit square square (from 'torch.rand') to a variety of other distributions and domains.
 
 **Getting Started**
 
 Open `aris/utils/sampling_utils.py`. You'll see a few `sample_*` functions and `pdf_*` functions.
 
-- A `sample_distribution` function has one argument `uv`, which is an `(N, 2)` tensor containing $N$ 2D uniformly random samples in the $[0, 1]$ square. You can also view each 2D sample as two 1D samples ($u,v$). The function should return a `(N, D)` tensor of samples in the desired distribution. $D$ is either 2 or 3.
+- A `sample_distribution` function has one argument `uv`, which is an `(N, 2)` tensor containing $N$ 2D uniformly random samples in the $[0, 1]$ square. You can also view each 2D sample as two 1D samples ($u,v$). The function should return a `(N, D)` tensor of samples in the desired distribution and over the desired domain. $D$ is either 2 or 3.
 
-- A `pdf_distribution` function takes in an `(N, D)` tensor of $N$ samples, and returns a `(N,)` tensor that has the PDF values of each sample in that distribution. You don't need to check if the samples are actually inside the distribution (just assume that they are).
+- A `pdf_distribution` function takes in an `(N, D)` tensor of $N$ samples, and returns a `(N,)` tensor with the PDF (probability density function) values of each sample in that distribution. You do not need to check if the samples are actually inside the distribution (just assume that they are).
 
-See the `uniform_square` example provided to you. It transforms the $[0, 1]$ square to the $[-1, 1]$ square, and every point in the square has PDF $p=0.25$.
+See the `uniform_square` example provided to you. It transforms the $[0, 1]$ square to the $[-1, 1]$ square, and every point in the square has PDF $p=0.25$ (this is because the integral of the PDF over the domain needs to be $1$, and the area of the $[-1, 1]$ square is $4$).
 
 **Visualization**
 
@@ -52,14 +51,14 @@ Run the third cell. You'll see a passing test followed by an error:
 
 ![Warping Test](images/a2/warping_test.png  height="120px")
 
-This cell tests all sampling and PDF functions by checking if the density of the sampled points from the `sample_` functions match the returned values from the corresponding `pdf_` functions. It throws an error right now because those functions haven't been implemented.
+This cell tests all sampling and PDF functions by checking if the density of the sampled points from the `sample_` functions match the returned values from the corresponding `pdf_` functions. It throws an error right now because those functions have not been implemented.
 
 !!! NOTE
-    While reading the sections below, also take a look at the report template for assignment 2 which has more specific requirements.
+    While reading the sections below, also take a look at the report template for Assignment 2 which has more specific requirements.
 
 ## 1.1 Tent
 
-Complete the `tent` functions for 2D samples in this distribution:
+Complete the `tent` functions for 2D samples in this distribution (the domain here is again the $[-1, 1]$ square, but the PDF is non-uniform):
 
 \begin{equation*}
 p(x,y)=p_1(x)p_1(y) \text{ where } p_1(t)=\begin{cases}1-|t|, &-1\le t\le 1 \\ 0, &\text{otherwise}\end{cases}
@@ -69,7 +68,7 @@ p(x,y)=p_1(x)p_1(y) \text{ where } p_1(t)=\begin{cases}1-|t|, &-1\le t\le 1 \\ 0
 
 For sampling $p_1(t)$ follow these steps:
 
-1. Compute the CDF $P_1(t)$
+1. Compute the CDF (cumulative distribution function) $P_1(t)$
 1. Derive the inverse $P^{-1}_1(t)$
 1. Map the uniform sample with the inverse
 
@@ -114,7 +113,7 @@ p(\theta, \phi)=\frac{\cos(\theta)}{\pi}
 
 ## 1.6 Beckmann
 
-Complete the `beckmann` functions for 3D samples on the upper half of a unit sphere with this density function:
+Complete the `beckmann` functions for 3D samples on the upper half of a unit sphere with this density function (we will later use this distribution to model glossy surfaces):
 
 \begin{equation*}
 p(\theta, \phi)=\frac{1}{2\pi}\cdot\frac{2e^{-\tan^2(\theta)/\alpha^2}}{\alpha^2\cos^3(\theta)}
@@ -150,11 +149,11 @@ And your code should pass the checks as well.
 
 Complete the point light integrator in `aris/integrator/point_light.py`. $\newcommand{xx}{{\bf x}}$
 
-The point light integrator represents a simple rendering algorithm: assume that there is a single light source that emits energy towards all directions. Some of these light hit an object and get reflected towards the camera.
+The point light integrator represents a simple rendering algorithm: assume that there is a single light source that emits energy towards all directions. Some of this light hits an object and gets reflected towards the camera.
 
-Of course, in implementation we render backwards: starting from the camera, we shoot rays and see if they hit any object. If the ray hits a point $\xx$, we check if the light source is visible to $\xx$, i.e., if light can arrive at $\xx$ without obstruction to get reflected towards the camera. If so, this ray will carry some energy and be visible.
+Of course, in our ray tracing implementation we render backwards: starting from the camera, we shoot rays and see if they hit any object. If the ray hits a point $\xx$, we check if the light source is visible to $\xx$, i.e., if light can arrive at $\xx$ without obstruction to get reflected towards the camera. If so, this ray will carry some energy and be visible.
 
-How do we compute this energy? For a point light located at ${\bf p}$ and emits energy ${\bf\Phi}$, the formula is:
+How do we compute this energy? For a point light located at ${\bf p}$ and emitting energy ${\bf\Phi}$, the formula is:
 
 \begin{align*}
 L(\xx) = \frac{{\bf\Phi}}{4\pi^{2}}\frac{\text{max}(0,\cos\theta)}{||\xx-{\bf p}||^{2}}V(\xx, {\bf p})
@@ -164,7 +163,7 @@ $\theta$ is the angle between the direction from $\xx$ to $\bf p$ and the shadin
 
 **Hints**
 
-1. To find if the light source is visible to $\xx$, shoot a ray from $\xx$ to $\bf p$. In our setup, the light source is outside the bounding box of the object, so visibility can be determined by whether the ray hits. When you shoot the ray, you should also step forward a little bit so that it won't hit $\xx$ itself.
+1. To find if the light source is visible to $\xx$, shoot a ray from $\xx$ to $\bf p$. In our setup, the light source is outside the bounding box of the object, so visibility can be determined by whether the ray hits anything. When you shoot the ray, you should also move the ray origin along the normal away from the surface a little bit. This avoids that ray tracing will return an intersection with $\xx$ itself (which could happen due to limited numerical precision).
 1. There is a `dot` function in `aris.utils.tensor_utils` to help you save some typing.
 
 !!! NOTE
@@ -196,7 +195,7 @@ L(\xx) = \int_{H^{2}(\xx)} V(\xx, \xx + \alpha\omega_i)\frac{\cos\theta}{\pi}\te
 
 Here, $H$ is the upper hemisphere centered at $\xx$; "up" here means the direction of the surface normal at $\xx$. $\theta$ is the angle between $\omega_i$ and the normal. $\alpha$ controls how far the occlusion effect is, and for this assignment you can assume $\alpha=\infty$.
 
-Pay attention to $\frac{\cos\theta}{\pi}$, it means that the samples have cosine weight on the hemisphere, which you have implemented in part 1. However, your samples are in a coordinate system where the "up" direction is $(0,0,1)$. Therefore, you need to transform them to the coordinate system at $\xx$ defined by its normal. You can use `LocalFrames` in `aris.utils.coords_utils` to do the conversion.
+Pay attention to $\frac{\cos\theta}{\pi}$, meaning that the samples have cosine weights on the hemisphere, which you have implemented in Part 1. However, your samples are in a coordinate system where the "up" direction is $(0,0,1)$. Therefore, you need to transform them to the coordinate system at $\xx$ defined by its normal. You can use `LocalFrames` in `aris.utils.coords_utils` to do the conversion.
 
 !!! NOTE
     Reminder: every ray only evaluates one sample on the hemisphere. The integral is approximated by shooting many rays.
