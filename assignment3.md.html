@@ -1,0 +1,176 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Assignment 3**
+
+_Advanced Computer Graphics (CMSC740), Fall 2022_
+
+In this assignment you'll implement:
+
+1. Area light, a "real" light source that is associated with a mesh in the scene
+1. Distribution ray tracing
+1. Dielectrics material (mirrors and glasses)
+1. Whitted-style ray tracing
+
+As before, pull the latest code before you start working.
+
+# 1. Area Light (25pts)
+
+In Aris, we represent geometry with triangle meshes. When you cast a ray with `ray_intersect`, the returned `GeometryOutput` object has a `brdf_i` tensor. `brdf_i` stores the indices of the triangle meshes hit by the rays. For example, if the scene has 10 meshes, and the first ray hits the 3rd mesh, `brdf_i[0] == 2`.
+
+To model an area light, we associate it with one of the meshes. In this model, each triangle of the mesh uniformly emits radiance towards all directions above its surface. Take a look at the `emitter/area.py` file. In the contructor of the `AreaLight` class, you can find the following arguments:
+
+- `radiance`, the radiance emitted by the triangles
+- `geometry`, the geometry representation of the scene
+- `i_primitive`, the index of the primitive (mesh) this area light belongs to
+- `i_emitter`, the index of this emitter in all emitters of the scene
+
+The constructor of the base class, `Emitter`, also updates the geometry instance so that we can check if a mesh is associated to an emitter.
+
+You task for this part is to complete the three functions in area light:
+
+- `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object.
+- `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance.
+- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set, compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lid. The `geometry` input is optional, and the area light should check whether `points` and `targets` are mutually visible when `geometry` is not `None`.
+
+Hints:
+
+- Take a look at the uniform sampling functions already provided in the Geometry class.
+- When you use the emitters later, remember to set all the required fields in `EmitterQuery`.
+
+# 2. Distribution Ray Tracing (40pts)
+
+In the previous Point Light exercise, the model was:
+
+- There is one light source, emitting towards all directions
+- The light source is a point, so it's either visible or not to a surface point
+
+For this exercise, the model is extended:
+
+- There can be multiple light sources. Each of them has an associated mesh, and they only emit towards the "front" side of the triangles (indicated by the normals).
+- A light source is a mesh, so it can be partially visible to a surface point. Therefore, we rely on Monte Carlo integration to determine reflected radiance.
+
+$\newcommand{\xx}{{\textbf x}}$
+
+The reflection equation, which expresses the reflected radiance due to incident illumination from all directions as an integral over the unit hemisphere centered at $\xx$, is defined as:
+
+\begin{align}
+L_{r}(\xx, \omega_{r})=\int_{\mathcal{H}^{2}}f_{r}(\xx,\omega_{i},\omega_{r})L_{i}(\xx, \omega_{i})\cos\theta_{i}\text{d}\omega_{i}
+\end{align}
+
+Here, the left hand side means the reflected radiance at point $\xx$ towards direction $\omega_{r}$. The $f_{r}$ function is the BRDF evaluation function. In Aris, it is modeled by the `eval()` function of the `BRDF` class, found in `aris/brdf/__init__.py`.
+
+In this assignment, we only consider direct illumination, so a point only receives incident radiance directly from light sources. In other words, we don't count the lights bounded off a wall and _then_ arrive at the point. What this means is that $L_{i}(\xx, \omega_{i})$ is zero except when $\omega_{i}$ points toward a light source.
+
+Therefore, while it is correct to compute this integration by randomly sampling on the hemisphere and checking if the ray hits a light source, the results will be extremely noisy as most samples will be wasted.
+
+We thus use a better strategy: instead of sampling a direction at point $\xx$, we sample a point directly on a light source, and check if it is visible to $\xx$. Conceptually, this means that we will integrate over the light source surfaces $\mathcal{L}$:
+
+$\newcommand{\yy}{{\textbf y}}$
+
+\begin{align}
+L_{r}(\xx, \omega_{r})=\int_{\mathcal{L}}f_{r}(\xx,\xx\to\yy,\omega_{r})L_{e}(\yy, \yy\to\xx)G(\xx,\yy)\text{d}\yy
+\label{eq:lr}
+\end{align}
+
+Here, $\xx\to\yy$ is the normalized direction from $\xx$ to $\yy$, and $L_{e}(\yy, \yy\to\xx)$ is the amount of emitted radiance at position $\yy$ towards $\xx$. Finally, the equation would not be correct without the $G$ term, also known as the geometry term. The reason is that we have changed the integration variable from the solid angle domain to positions, so we need a factor to account for this:
+
+$\newcommand{\nn}{{\textbf n}}$
+
+\begin{align}
+G(\xx,\yy):=V(\xx,\yy)\frac{|\nn_{\xx}\cdot (\xx \to \yy)|\cdot|\nn_{\yy}\cdot (\yy \to \xx)|}{||\xx-\yy||^{2}}
+\end{align}
+
+$\nn_{\xx}$ and $\nn_{\yy}$ are the surface normals at $\xx$ and $\yy$, respectively. $V$ is the visibility function.
+
+Now, implement distribution ray tracing in `aris/integrator/whitted.py`. You'll find a loop that breaks immediately: don't worry about the loop, just complete the one block you're asked to. You can leave those "Whitted" parts untouched for now; they're for the last part of this assignment.
+
+$\newcommand{\cc}{{\textbf c}}$
+
+To give more details, for each ray starting at the camera position $\cc$ towards the direction $\omega_{c}$, if it hits a point $\xx$, the integrator should compute:
+
+\begin{align}
+L_{i}(\cc, \omega_{c})=L_{e}(\xx, -\omega_{c})+L_{r}(\xx, -\omega_{c})
+\end{align}
+
+As discussed above, $L_{e}$ is the emission at point $\xx$, which means this term is zero unless the ray hits an emitter. For $L_{r}$, you should sample a single point on the emitters and compute the body of the integral (Eq. \ref{eq:lr}). Note that you'll need to divide the result by the probability of sample $\yy$ per unit area (you have implemented this in `AreaLight`). When there're multiple light sources, it also needs to account for the probability of selecting that particular light source. In this class we choose all light sources with _equal probability_ regardless of their surface area.
+
+## How does BRDF work in Aris?
+
+In Aris, each mesh (geometry primitive) is associated with a BRDF. When a batch of rays are shot, they may hit different meshes, thus having different BRDFs. Unfortunately, this means that we cannot process all the hit points with one function call to a particular BRDF ($f_{r}$ function) because they can have different definitions. Therefore, we use a less efficient approach, roughly like this:
+
+1. Goal: sample BRDFs of a batch of points
+1. For each mesh (i.e. BRDF) in the scene...
+    1. Gather all the points that hits the mesh (line 50 of `aris/core/scene.py`)
+    1. Sample for the subset of the points in one go (line 55)
+    1. Save the results (line 60)
+
+Evaluating a BRDF function is done with the same spirit. These functions are provided in the skeleton as member functions of `Scene`. You're encouraged to read and understand them as you may write similar code for emitter sampling.
+
+## How does Emitters work?
+
+You can follow the above idea and figure out how to:
+
+- Process the rays that hit emitters
+- Sample emitters
+
+This means that you'll need to write loops in your integrator.
+
+## Reminder: you're not required to do it this way
+
+The above scheme of BRDF and Emitter sampling / evaluating is the best we came up with, so we share the ideas and skeleton code with you to help you with _one possible solution_. Feel free to do it in other (correct) ways, and we look forward to learning about more efficient apporaches from you!
+
+It's the same case for the provided skeletons in the `render` function. You don't have to follow the structures of the code; they're just hints to help you get started.
+
+## Verifying
+
+Render the cbox scene with this command:
+
+```bash
+python render.py scene=cbox scene/brdf=cbox_diffuse spp=256 integrator=whitted
+```
+
+You should decrease `spp` for debugging.
+
+![cbox Distribution Ray Tracing](images/a3/cbox-dist.png)
+
+# 3. Dielectrics (25pts)
+
+In this part, you'll implement a dielectric (refractive) `BRDF` class in `aris/brdf/dielectric.py`, based on Snell's law and the Fresnel equations. You'll need to produce random samples to choose between reflections and refractions.
+
+For your reference, there is a `mirror.py` which defines a perfect mirror based on a Dirac delta function. Note that in Aris, the cosine importance term is multiplied in `sample()` function (see `diffuse.py` for an example), so for specular BRDFs (mirror and dielectric), the terms cancel out and the values are ones.
+
+Hints:
+
+- Remember to check if the rays are from inside or outside, and swap `ext_ior` and `int_ior` accordingly.
+- Remember to handle total internal reflections.
+- You may want to make Fresnel term computation an individual function (for future assignments).
+
+# 4. Whitted-sytle Ray Tracing (10pts)
+
+Finally, with the specular materials implemented, you're ready to turn the distribution ray tracer into a Whitted-style ray tracer (named after Turner Whitted) which accounts for specular reflections and refractions.
+
+Modify `whitted.py` following the instructions and hints in code:
+
+1. Determine which points are diffuse and which are specular. You can do this by sampling the BRDFs and checking the `is_specular` tensor.
+1. For diffuse surfaces, the result remains the same as before.
+1. For specular surfaces, trace the next rays from the reflections / refractions. The BRDF sampling gives you a sampling weight $c$ and a new direction $\omega_{r}$. This is what the outer loop is for. However, to avoid infinite loops, apply a Russian-roulette scheme to terminate specular rays. Conceptually, for each point $\xx$ you'll compute:
+
+\begin{align}
+L_{i}(\cc, \omega_{c})=\begin{cases} \frac{1}{p}cL_{i}(\xx, \omega_{r}), &\text{if } \xi < p \\0, &\text{otherwise} \end{cases}
+\end{align}
+
+Here $p$ is the probability to continue tracing (`self.cont_prob`), and $\xi$ is a random sample for each ray that decides whether to trace that ray. While this function is recursive, we implement it as a loop for better efficiency and easier debugging.
+
+Render with this command:
+
+```bash
+python render.py scene=cbox scene/brdf=cbox spp=512 integrator=whitted
+```
+
+Note: the extension is backward-compatible, so you can still render `cbox_diffuse` and get the same result as in part 2.
+
+![cbox Distribution Ray Tracing](images/a3/cbox-whitted.png)
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
