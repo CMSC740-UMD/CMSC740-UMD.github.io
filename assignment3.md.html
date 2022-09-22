@@ -7,9 +7,9 @@ _Advanced Computer Graphics (CMSC740), Fall 2022_
 
 In this assignment you'll implement:
 
-1. Area light, a "real" light source that is associated with a mesh in the scene
+1. Area lights, a realistic type of light source that is associated with a mesh in the scene
 1. Distribution ray tracing
-1. Dielectrics material (mirrors and glasses)
+1. Dielectrics material for mirror reflection and refraction
 1. Whitted-style ray tracing
 
 As before, pull the latest code before you start working.
@@ -27,11 +27,11 @@ To model an area light, we associate it with one of the meshes. In this model, e
 
 The constructor of the base class, `Emitter`, also updates the geometry instance so that we can check if a mesh is associated to an emitter.
 
-You task for this part is to complete the three functions in area light:
+Your task for this part is to complete these three functions for area lights, which will later be used in the second part of this assignment:
 
 - `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object.
 - `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance.
-- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set, compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lid. The `geometry` input is optional, and the area light should check whether `points` and `targets` are mutually visible when `geometry` is not `None`.
+- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set, compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit. The `geometry` input is optional, and the area light should check whether `points` and `targets` are mutually visible when `geometry` is not `None`.
 
 Hints:
 
@@ -60,7 +60,7 @@ L_{r}(\xx, \omega_{r})=\int_{\mathcal{H}^{2}}f_{r}(\xx,\omega_{i},\omega_{r})L_{
 
 Here, the left hand side means the reflected radiance at point $\xx$ towards direction $\omega_{r}$. The $f_{r}$ function is the BRDF evaluation function. In Aris, it is modeled by the `eval()` function of the `BRDF` class, found in `aris/brdf/__init__.py`.
 
-In this assignment, we only consider direct illumination, so a point only receives incident radiance directly from light sources. In other words, we don't count the lights bounded off a wall and _then_ arrive at the point. What this means is that $L_{i}(\xx, \omega_{i})$ is zero except when $\omega_{i}$ points toward a light source.
+In this assignment, we only consider direct illumination, so a point only receives incident radiance directly from light sources. In other words, we don't include  indirect light that bounces off a surface and _then_ arrives at the point. What this means is that $L_{i}(\xx, \omega_{i})$ is zero except when $\omega_{i}$ points toward a light source.
 
 Therefore, while it is correct to compute this integration by randomly sampling on the hemisphere and checking if the ray hits a light source, the results will be extremely noisy as most samples will be wasted.
 
@@ -93,7 +93,7 @@ To give more details, for each ray starting at the camera position $\cc$ towards
 L_{i}(\cc, \omega_{c})=L_{e}(\xx, -\omega_{c})+L_{r}(\xx, -\omega_{c})
 \end{align}
 
-As discussed above, $L_{e}$ is the emission at point $\xx$, which means this term is zero unless the ray hits an emitter. For $L_{r}$, you should sample a single point on the emitters and compute the body of the integral (Eq. \ref{eq:lr}). Note that you'll need to divide the result by the probability of sample $\yy$ per unit area (you have implemented this in `AreaLight`). When there're multiple light sources, it also needs to account for the probability of selecting that particular light source. In this class we choose all light sources with _equal probability_ regardless of their surface area.
+As discussed above, $L_{e}$ is the emission at point $\xx$, which means this term is zero unless the ray hits an emitter. For $L_{r}$, you should sample a single point on the emitters and compute the body of the integral (Eq. \ref{eq:lr}). Note that you'll need to divide the result by the probability of sample $\yy$ per unit area (you have implemented this in `AreaLight`). When there are multiple light sources, it also needs to account for the probability of selecting that particular light source. In this class we choose all light sources with _equal probability_ regardless of their surface area.
 
 ## How does BRDF work in Aris?
 
@@ -105,7 +105,7 @@ In Aris, each mesh (geometry primitive) is associated with a BRDF. When a batch 
     1. Sample for the subset of the points in one go (line 55)
     1. Save the results (line 60)
 
-Evaluating a BRDF function is done with the same spirit. These functions are provided in the skeleton as member functions of `Scene`. You're encouraged to read and understand them as you may write similar code for emitter sampling.
+Evaluating a BRDF function is done in the same spirit. These functions are provided in the skeleton as member functions of `Scene`. You're encouraged to read and understand them as you may write similar code for emitter sampling.
 
 ## How does Emitters work?
 
