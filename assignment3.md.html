@@ -29,9 +29,11 @@ The constructor of the base class, `Emitter`, also updates the geometry instance
 
 Your task for this part is to complete these three functions for area lights, which will later be used in the second part of this assignment:
 
-- `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object.
-- `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance.
-- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set, compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit. The `geometry` input is optional, and the area light should check whether `points` and `targets` are mutually visible when `geometry` is not `None`.
+- `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object. For the probability densities, you should call the `pos_pdf` function below.
+- `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance. This function is only used by `sample` now but will become more useful in future assignments.
+- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set (see the comments of the `EmitterQuery` class for what these tensors are), compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit.
+
+  The `geometry` input is optional, and the `le` function should check whether `points` and `targets` are mutually visible when `geometry` is not `None`. The idea is that if the emitter points are sampled, it will be necessary to check visibility. However, if the points are already ray-traced (a ray bounced from an object and hit the emitter), the check won't be needed.
 
 Hints:
 
@@ -97,7 +99,7 @@ As discussed above, $L_{e}$ is the emission at point $\xx$, which means this ter
 
 ## How does BRDF work in Aris?
 
-In Aris, each mesh (geometry primitive) is associated with a BRDF. When a batch of rays are shot, they may hit different meshes, thus having different BRDFs. Unfortunately, this means that we cannot process all the hit points with one function call to a particular BRDF ($f_{r}$ function) because they can have different definitions. Therefore, we use a less efficient approach, roughly like this:
+In Aris, each mesh (geometry primitive) is associated with a BRDF. When a batch of rays are shot, they may hit different meshes, thus having different BRDFs. Unfortunately, this means that we cannot process all the hit points with one function call to a particular BRDF ($f_{r}$ function) because they can have different definitions. Therefore, we use a less efficient approach, by iterating over all meshes and sampling the BRDFs for each mesh separately:
 
 1. Goal: sample BRDFs of a batch of points
 1. For each mesh (i.e. BRDF) in the scene...
@@ -168,7 +170,7 @@ Render with this command:
 python render.py scene=cbox scene/brdf=cbox spp=512 integrator=whitted
 ```
 
-Note: the extension is backward-compatible, so you can still render `cbox_diffuse` and get the same result as in part 2.
+Note: the extension does not change how diffuse surfaces are handled. Therefore, you will still produce the same result for part 2 (`cbox_diffuse`) after implementing this.
 
 ![cbox Distribution Ray Tracing](images/a3/cbox-whitted.png)
 
