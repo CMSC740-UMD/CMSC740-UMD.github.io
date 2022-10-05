@@ -1,0 +1,181 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Assignment 4**
+
+_Advanced Computer Graphics (CMSC740), Fall 2022_
+
+In this assignment, you'll implement:
+
+1. Microfacet BRDF
+1. Path tracer (in three steps)
+
+!!! NOTE
+    There is an appendix at the end listing some functions you may find useful.
+
+# 1. Microfacet BRDF (30pts)
+
+!!! NOTE
+    Rendering the microfacet BRDF relies on correct Beckmann distribution, area light, and Whitted-style ray tracing. If you were not able to complete these parts, we can provide reference implementations.
+
+The microfacet BRDF simulates plastic-like materials by blending:
+
+- A diffuse BRDF that models colored reflection from the interior of the material, and
+- A rough dielectric BRDF that models non-colored specular reflection from the rough boundary.
+    - It has no refraction, only reflection.
+    - The reflection is not like a perfect mirror that refelcts by the surface normal. Instead, it reflects by a normal sampled from a distribution to mimic the rough surface.
+
+This BRDF is considered non-specular in Aris code (`BrdfQuery.is_specular` is false).
+
+## Sampling the Microfacet BRDF
+
+The distribution density to be sampled, in solid angle measure, is:
+$\newcommand{\wi}{\omega_{i}}$
+$\newcommand{\wo}{\omega_{o}}$
+$\newcommand{\wh}{\omega_{h}}$
+$\newcommand{\wv}{\omega_{v}}$
+
+\begin{align}
+p(\wi,\wo) = k_{s} D(\wh) J_{h} + (1 - k_{s})\frac{\cos \theta_{i}}{\pi}
+\label{eq:microfacet_pdf}
+\end{align}
+
+As you may notice, it's a linear blend of a rough dielectric reflection (weighted by $k_{s}$) and a diffuse reflection (weighted by $(1-k_{s})$). Here:
+
+- $k_{d}\in [0,1]^{3}$ is the RGB diffuse color
+- $k_{s}=1 - \max(k_{d})$ is the blending weight
+- $\wh=\frac{(\wi+\wo)}{||\wi+\wo||_{2}}$ is the half direction vector
+- $D$ is the Beckmann distribution
+- $J_h=(4(\wh\cdot\wi))^{-1}$ is the Jacobian of the half direction
+
+To implement sampling, follow these steps (described for one ray direction $\wo$, but you should have a vectorized implementaion):
+
+1. Decide whether this ray has a dielectric reflection or a diffuse one by comparing a random sample in range $[0, 1]$ with $k_{s}$.
+1. In the diffuse case, generate a cosine-weighted direction on the hemisphere (you can check `diffuse.py` for an example).
+1. In the specular case:
+    1. Sample a normal from the Beckmann distribution. The parameter $\alpha$ is the `roughness` attribute stored in the `MicrofacetBrdf` object.
+    1. Reflect the ray using this normal.
+
+Implement the above in the `MicrofacetBrdf.sample()` function. Your code should fill the `wi` tensor with sampled directions.
+
+## Evaluating the Microfacet BRDF
+
+The skeleton code has a complete `MicrofacetBrdf.eval()` function that makes calls to the two functions in the same file that you should implement:
+
+- `microfacet_eval`: computes the reflected color, given the directions and parameters
+- `microfacet_pdf`: computes the PDF
+
+For the `microfacet_pdf` function, simply follow Eq. $\ref{eq:microfacet_pdf}$.
+
+For `microfacet_eval`, the function is defined as:
+
+\begin{align}
+f_{r}(\wi,\wo)=\frac{k_{d}}{\pi}+k_{s}\frac{D(\wh)F(\wh\cdot \wo)G(\wi,\wo,\wh)}{4\cos\theta_{i} \cos\theta_{o} \cos\theta_{h}}
+\end{align}
+
+$D$ is the Beckmann pdf function, and $F$ is the Fresnel term. The $G$ function is the shadowing function, approximated by:
+
+\begin{align}
+G(\wi,\wo,\wh) &= G_1(\wi,\wh)G_1(\wo,\wh) \\
+G_1(\wv,\wh) &= \mathcal{X}^{+}\left(\frac{\wv\cdot\wh}{\wv\cdot\textbf{n}}\right)\begin{cases} \frac{3.535b+2.181b^{2}}{1+2.276b+2.577b^{2}}, &b<1.6 \\ 1, &\text{otherwise} \end{cases} \\
+b &= (\alpha \tan \theta_{v})^{-1} \\
+\mathcal{X}^{+}(c) &= \begin{cases}1, &c>0 \\ 0, &c\le 0 \end{cases}
+\end{align}
+
+$\theta_{v}$ is the angle between the surface normal $\textbf{n}$ and the $\wv$ argument of $G_1$.
+
+Run the following commands to render the Ajax model with two different roughness parameters:
+
+```
+python render.py integrator=whitted scene=ajax scene/brdf=ajax_rough spp=64
+python render.py integrator=whitted scene=ajax scene/brdf=ajax_smooth spp=64
+```
+
+Reference results:
+
+![ajax-rough](images/a4/ajax-rough.png height="400px") ![ajax-smooth](images/a4/ajax-smooth.png height="400px")
+
+# 2. Brute Force Path Tracer (15pts)
+
+In the last assignment you implemented the Whitted-style ray tracing that samples emitters when a diffuse surface is hit. To account for indirect illumination, we should also trace the rays that hit diffuse surfaces.
+
+As a starting point, we temporarily remove the emitter sampling part and rely purely on the rays hitting light sources by chance.
+
+Implement the "brute force" path tracer in `aris/integrators/path.py`. It's similar to your Whitted-style integrator and make use of `max_path_length` and `cont_prob`, with two differences:
+
+- Remove emitter sampling
+- Continue trace a ray as long as it hits a surface, regardless of diffuse / specular
+
+In the  `PathIntegrator` class, there are two additional attributes: `enable_emitter_sample` and `mis`. They're for enabling more complicated rendering strategies later. For "brute force", they're both set to false.
+
+Render with the following commands (for debugging, you may want to reduce the spp and/or scale):
+
+```
+python render.py integrator=path_bf scene=cbox spp=512
+python render.py integrator=path_bf scene=veach spp=256
+```
+
+Reference results:
+
+![cbox](images/a4/cbox-bf.png height="400px") ![veach](images/a4/veach-bf.png height="400px")
+
+# 3. Emitter Sampling Path Tracer (25pts)
+
+You may have noticed that the "brute force" strategy rendered very noisy images. We'll now add the emitter sampling as in the Whitted-style integrator.
+
+In `aris/integrators/path.py`, add code that samples emitters (for diffuse surface hits) if `self.enable_emitter_sample` is set to `True`. Also, to avoid double counting, when processing emitter hits, radiance should no longer be accumulated if the ray comes from diffuse surface reflection (because an emitter has already been sampled).
+
+Render with the following commands:
+
+```
+python render.py integrator=path_ems scene=cbox spp=512
+python render.py integrator=path_ems scene=veach spp=256
+```
+
+Reference results:
+
+![cbox](images/a4/cbox-ems.png height="400px") ![veach](images/a4/veach-ems.png height="400px")
+
+# 4. Multiple Importance Sampling (30pts)
+
+In part 2, diffuse radiances come from direct emitter hits. In part 3, they rely on emitter sampling. For this last part, you'll combine both strategies with multiple importance sampling:
+
+1. When sampling an emitter, determine the density of the sample (with `emitter.pos_pdf`). Also, compute the density that the BRDF reflection _would hypothetically_ have sampled the same direction (with `scene.eval_brdf`).
+1. Weight the contribution of the emitter sample using this formula:
+    \begin{align}
+    w_{\text{Light}}(p_{\text{Light}}, p_{\text{BRDF}})=\frac{p_{\text{Light}}}{p_{\text{Light}}+p_{\text{BRDF}}}
+    \end{align}
+1. When a BRDF sample hits an emitter, estimate the probability that emitter sampling _would hypothetically_ have sampled this point, and weight the contribution similarly:
+    \begin{align}
+    w_{\text{BRDF}}(p_{\text{Light}}, p_{\text{BRDF}})=\frac{p_{\text{BRDF}}}{p_{\text{Light}}+p_{\text{BRDF}}}
+    \end{align}
+
+
+Note that in Aris, the BRDF pdf values are in solid angle measure, while the emitter pdf values are in unit area measure. You must convert one of them before computing the weights.
+
+In code, the changes will roughly be:
+
+1. When processing emitter hits, for part 3 you should have already set contribution of diffuse rays to zero when `self.enable_emitter_sample` is set. Now, when `self.mis` is also set, instead of setting them to zero, weight the contribution as described above.
+1. When sampling emitters, when `self.mis` is set, weight the contribution as well.
+
+Render with the following commands:
+
+```
+python render.py integrator=path_mis scene=cbox spp=512
+python render.py integrator=path_mis scene=veach spp=128
+```
+
+Reference results:
+
+![cbox](images/a4/cbox-mis.png height="400px") ![veach](images/a4/veach-mis.png height="400px")
+
+# Appendix. Useful APIs and Hints
+
+Here we list some APIs you may find helpful when coding the assignments.
+
+- `Scene.sample_brdf` and `Scene.eval_brdf` handle BRDF calls of multiple rays for you.
+- `aris.utils.tensor_utils.dot` computes dot product between tensors.
+- [How to index and slice tensors](https://numpy.org/doc/stable/user/basics.indexing.html) (it's for numpy but also applies to PyTorch)
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
