@@ -174,5 +174,13 @@ Note: the extension does not change how diffuse surfaces are handled. Therefore,
 
 ![cbox Distribution Ray Tracing](images/a3/cbox-whitted.png)
 
+# Appendix. Useful APIs
+
+Here we list some APIs you may find helpful when coding the assignments.
+
+- `Geometry.uniform_sample` and `Geometry.uniform_sample_pos_pdf` (implemented in the `Mesh` class if you're interested) helps you sample uniformly from a primitive and calculate the pdfs. Your area light `sample` and `pos_pdf` can simply call these functions and convert the results.
+- `Scene.sample_brdf` and `Scene.eval_brdf` handle BRDF calls of multiple rays for you.
+- `aris.utils.tensor_utils.dot` computes dot product between tensors.
+
 <style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
 <!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
