@@ -29,7 +29,7 @@ tmux
 This command gives you a shell inside `tmux` so that your program can continue to run when you disconnect (by accident, lossing network connection, etc.).
 
 !!! NOTE
-    Quick `tmux` reference: after starting a program and wants to leave it running, press `Ctrl+B D` to detach from the window. Later, use `tmux ls` and `tmux a -t` to reconnect to the window. For more information about `tmux`, check (here)[https://github.com/tmux/tmux/wiki/Getting-Started].
+    Quick `tmux` reference: after starting a program and wants to leave it running, press `Ctrl+B D` to detach from the window. Later, use `tmux ls` and `tmux a -t` to reconnect to the window. For more information about `tmux`, check [here](https://github.com/tmux/tmux/wiki/Getting-Started).
 
 The machine you've connected to is called a "submission node" that allows you to further request and connect to "compute nodes" that actually have the power to run jobs. Use the following command to request one:
 
@@ -40,7 +40,7 @@ srun --pty --partition class --account class --qos default --ntasks 4 --mem 16g 
 !!! NOTE
     You can keep this command in a shell script file (e.g. `request.sh`) to avoid typing it everytime you grab a new node.
 
-You should always keep the `srun --pty --partition class --account class --qos default` part. `--ntasks` means the number of CPU cores you'll get, and `--time` refers to how long this reservation will be available. You'll see two messages:
+You should always keep the `srun --pty --partition class --account class --qos default` part. `--ntasks` means the number of CPU cores you'll get, and `--time` is how long this reservation will be available. You'll see two messages:
 
 ```
 srun: job 160466 queued and waiting for resources
@@ -81,7 +81,7 @@ Sun Oct 16 09:38:11 2022
 +-----------------------------------------------------------------------------+
 ```
 
-If everything checks out, you're now ready to run Aris on the cluster.
+If nvidia-smi works fine, you're now ready to run Aris on the cluster.
 
 
 # Running Aris
@@ -92,14 +92,14 @@ If you have a private GitHub repository holding your code, the easiest way to sy
 
 1. Create an SSH key pair on the cluster with `ssh-keygen -t ed25519`. You can do it on either the submission node or a compute node because they all share the same home directory.
 1. Add the public key to your repo's [Deploy keys](https://docs.github.com/en/developers/overview/managing-deploy-keys).
-1. On the cluster, `git pull` your code to your home directory.
-1. By default, the `data` folder is not part of the code in your git repository. We have put a copy of the data on a shared folder on the cluster. You can `cd` to `aris-renderer` and copy the data with this command: `rsync -ahP /fs/class-projects/fall2022/cmsc740/cs740g00/data .`
+1. On the cluster, `git clone` your code to your home directory (use SSH).
+1. By default, the `data` folder is not part of the code in your git repository. We have put a copy of the data in a shared folder on the cluster. You can `cd` to `aris-renderer` and copy the data with this command: `rsync -ahP /fs/class-projects/fall2022/cmsc740/cs740g00/data .`
 
 Your TA's recommended workflow is: edit and debug your code locally, and push a commit when it's ready. Then, pull the code on the cluster and run it there. You may find other ways that suits your style better.
 
 ## Run Your Code
 
-We have prepared the Python environment as a Docker image. If you're not familiar with Docker and the container concept, check out the [tutorial](https://docs.docker.com/get-started/). Think of them as very light-weight virtual machines that we use to ship a prepared environment to you, and they're so light that you can just start a shell inside it without having to wait for a system to boot.
+We have prepared the Python environment as a Docker image. If you're not familiar with Docker and the container concept, check this [tutorial](https://docs.docker.com/get-started/). Think of them as very light-weight virtual machines that we use to ship a prepared environment to you, and they're so light that you can just start a shell inside it without having to wait for a system to boot.
 
 On the Nexus cluster, a different container management system called [Singularity](https://docs.sylabs.io/) is used, but the general container ideas still apply. To start a shell inside the environment, run:
 
@@ -128,14 +128,14 @@ The way Aris works is that it'll move the `rays_o` and `rays_d` tensors to the d
 
 To access a tensor's (e.g. rays_o) device, use `rays_o.device`. You can, for example, keep a variable `device = rays_o.device` at the beginning of the function. Then, whenever you create a tensor directly (with functions like `torch.zeros, torch.ones, torch.rand`), specify the `device=device` argument.
 
-You may get errors like "Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!" the first time you run your code. Locate the line of error and make sure that all tensors are moved to the device of `rays_o`.
+You may get errors like "Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!" the first time you run your code. Locate the line of error and make sure that all tensors are on the same device as `rays_o`.
 
 ## Copying Output
 
 There are several ways you can copy your output from the cluster:
 
 1. Use `rsync` (recommended), `sftp`, or `scp`. Use the submission node as the remote host.
-1. Use VSCode remote to connect to the submission node, open the `aris-renderer` folder, and browse the `outputs` folder
+1. Use [VSCode remote](https://code.visualstudio.com/docs/remote/remote-overview) to connect to the submission node, open the `aris-renderer` folder, and browse the `outputs` folder.
 
 # Useful Links
 
