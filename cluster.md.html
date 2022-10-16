@@ -1,0 +1,147 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Using the Cluster**
+
+_Advanced Computer Graphics (CMSC740), Fall 2022_
+
+In assignment 5, we'll integrate machine learning into the rendering pipeline and explore inverse rendering. As machine learning involves optimization of neural networks, it is often computationally prohibitive on a CPU, and requires GPUs that are designed for this type of tasks. For a long time, the majority of machine learning libraries (PyTorch, Tensorflow, etc.) supports only one type of GPUs, namely CUDA-enabled Nvidia GPUs, because CUDA was the only feasible GPU computation framework available to the general public. Today, PyTorch also supports the ROCm framework from AMD, and is also experimenting with Apple's Metal framework. However, CUDA is still the most optimized and popular choice.
+
+To make sure that everyone has access to the necessary computational resources, we provide you access to Nexus, a GPU cluster in the department. The following text gives detailed information on working with the cluster and running Aris with a GPU.
+
+!!! NOTE
+    If you have your own workstation / laptop with a compatible GPU, feel free to use it for either debugging or running everything. Just [install PyTorch](https://pytorch.org/get-started/locally/) with the proper package.
+
+# Getting Started
+
+Follow the instructions in the ELMS announcement to create and activate your account. Make sure you can connect to the job submission node via ssh:
+
+```bash
+ssh nexusclass00.umiacs.umd.edu
+```
+
+Your shell prompt should look like `[cs7400xx@nexusclass00 ~]$`. The first thing you should do after logging in is running `tmux`:
+
+```bash
+tmux
+```
+
+This command gives you a shell inside `tmux` so that your program can continue to run when you disconnect (by accident, lossing network connection, etc.).
+
+!!! NOTE
+    Quick `tmux` reference: after starting a program and wants to leave it running, press `Ctrl+B D` to detach from the window. Later, use `tmux ls` and `tmux a -t` to reconnect to the window. For more information about `tmux`, check (here)[https://github.com/tmux/tmux/wiki/Getting-Started].
+
+The machine you've connected to is called a "submission node" that allows you to further request and connect to "compute nodes" that actually have the power to run jobs. Use the following command to request one:
+
+```bash
+srun --pty --partition class --account class --qos default --ntasks 4 --mem 16g --gres gpu:1 --time 4:00:00 bash
+```
+
+!!! NOTE
+    You can keep this command in a shell script file (e.g. `request.sh`) to avoid typing it everytime you grab a new node.
+
+You should always keep the `srun --pty --partition class --account class --qos default` part. `--ntasks` means the number of CPU cores you'll get, and `--time` refers to how long this reservation will be available. You'll see two messages:
+
+```
+srun: job 160466 queued and waiting for resources
+srun: job 160466 has been allocated resources
+```
+
+And you'll find the hostname in your shell prompt changing from `nexusclass00` to `tronxx`. The `tronxx` hosts are the computational nodes. At this point, your shell is roughly like this:
+
+```
+(1) bash (nexusclass00) -> tmux -> (2) bash (nexusclass00) -> (3) bash (tronxx)
+```
+
+If you detach from tmux with `Ctrl+B D`, you'll be back in the (1) bash. If you type `exit` (don't actually do it yet), you'll terminate the (3) bash and release the reserved machine, and return to the (2) bash.
+
+Now, check if you have GPU with `nvidia-smi`:
+
+```bash
+$ nvidia-smi
+Sun Oct 16 09:38:11 2022
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.65.01    Driver Version: 515.65.01    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA RTX A4000    Off  | 00000000:01:00.0 Off |                  Off |
+| 41%   27C    P8    13W / 140W |      0MiB / 16376MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+```
+
+If everything checks out, you're now ready to run Aris on the cluster.
+
+
+# Running Aris
+
+## Setup and Workflow
+
+If you have a private GitHub repository holding your code, the easiest way to synchronize your code is using the following workflow. First-time setup:
+
+1. Create an SSH key pair on the cluster with `ssh-keygen -t ed25519`. You can do it on either the submission node or a compute node because they all share the same home directory.
+1. Add the public key to your repo's [Deploy keys](https://docs.github.com/en/developers/overview/managing-deploy-keys).
+1. On the cluster, `git pull` your code to your home directory.
+1. By default, the `data` folder is not part of the code in your git repository. We have put a copy of the data on a shared folder on the cluster. You can `cd` to `aris-renderer` and copy the data with this command: `rsync -ahP /fs/class-projects/fall2022/cmsc740/cs740g00/data .`
+
+Your TA's recommended workflow is: edit and debug your code locally, and push a commit when it's ready. Then, pull the code on the cluster and run it there. You may find other ways that suits your style better.
+
+## Run Your Code
+
+We have prepared the Python environment as a Docker image. If you're not familiar with Docker and the container concept, check out the [tutorial](https://docs.docker.com/get-started/). Think of them as very light-weight virtual machines that we use to ship a prepared environment to you, and they're so light that you can just start a shell inside it without having to wait for a system to boot.
+
+On the Nexus cluster, a different container management system called [Singularity](https://docs.sylabs.io/) is used, but the general container ideas still apply. To start a shell inside the environment, run:
+
+```bash
+singularity shell --nv /fs/class-projects/fall2022/cmsc740/singularity/pyenv-aris_221016.01.sif
+```
+
+!!! NOTE
+    You can keep this command in a shell script file (e.g. `start.sh`) to avoid typing it everytime you grab a new node.
+
+Your home directory is also mounted in the singularity shell. Your prompt is now `Singularity>`. To get a nicer prompt and load your `.bashrc` config (if you have one), you can type `bash`. Now, your shell would look like:
+
+```
+(1) bash (nexusclass00) -> tmux -> (2) bash (nexusclass00) -> (3) bash (tronxx) -> (4) Singularity -> (5) bash in Singularity
+```
+
+(5) is optional. If you exit the Singularity shell, you leave the prepared environment. As before, detach from tmux to return to (1), and terminate (3) to release the node.
+
+Now, `cd` to your `aris-renderer` code folder. Try running the commands for the previous and current assignments, but **replace `python` with `python3`**. Your code should run fine (on the CPU).
+
+## Use the GPU
+
+To make Aris use the GPU, append `device=cuda:0` to the commands.
+
+The way Aris works is that it'll move the `rays_o` and `rays_d` tensors to the desinated device (default is CPU) when calling your integrator. It is your responsibility to make sure that all the tensors created for computation are on the same device. Our extensive use of `torch.zeros_like` and the `device` parameter in the `AreaLight.sample` functions are for this purpose.
+
+To access a tensor's (e.g. rays_o) device, use `rays_o.device`. You can, for example, keep a variable `device = rays_o.device` at the beginning of the function. Then, whenever you create a tensor directly (with functions like `torch.zeros, torch.ones, torch.rand`), specify the `device=device` argument.
+
+You may get errors like "Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!" the first time you run your code. Locate the line of error and make sure that all tensors are moved to the device of `rays_o`.
+
+## Copying Output
+
+There are several ways you can copy your output from the cluster:
+
+1. Use `rsync` (recommended), `sftp`, or `scp`. Use the submission node as the remote host.
+1. Use VSCode remote to connect to the submission node, open the `aris-renderer` folder, and browse the `outputs` folder
+
+# Useful Links
+
+1. General information about the Nexus cluster: [https://wiki.umiacs.umd.edu/umiacs/index.php/Nexus](https://wiki.umiacs.umd.edu/umiacs/index.php/Nexus)
+1. More on the SLURM: [https://wiki.umiacs.umd.edu/umiacs/index.php/SLURM](https://wiki.umiacs.umd.edu/umiacs/index.php/SLURM)
+1. [How to start tmux with attach if a session exists](https://unix.stackexchange.com/questions/103898/how-to-start-tmux-with-attach-if-a-session-exists)
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
