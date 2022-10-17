@@ -103,8 +103,11 @@ We have prepared the Python environment as a Docker image. If you're not familia
 
 On the Nexus cluster, a different container management system called [Singularity](https://docs.sylabs.io/) is used, but the general container ideas still apply. To start a shell inside the environment, run:
 
+!!! WARNING
+    In the initial version of the document, the sif file was inside the folder "singularity". We have moved the file to "cs740g00" per request from the cluster administrators.
+
 ```bash
-singularity shell --nv /fs/class-projects/fall2022/cmsc740/singularity/pyenv-aris_221016.01.sif
+singularity shell --nv /fs/class-projects/fall2022/cmsc740/cs740g00/pyenv-aris_221016.01.sif
 ```
 
 !!! NOTE
