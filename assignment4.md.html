@@ -115,9 +115,16 @@ python render.py integrator=path_bf scene=cbox spp=512
 python render.py integrator=path_bf scene=veach spp=256
 ```
 
-Reference results:
+!!! WARNING
+    **Update 10/17** Take a look at [this Piazza post](https://piazza.com/class/l77sgv2ummd60t/post/193). You can choose to continue or stop ray bouncing when it hits an emitter surface, according to your preference and convenience of coding. Your choice will make some small differences in the final rendering, and both are considered correct. We now include reference renderings for both cases.
+
+Reference results 1:
 
 ![cbox](images/a4/cbox-bf.png height="400px") ![veach](images/a4/veach-bf.png height="400px")
+
+Reference results 2:
+
+![cbox](images/a4/cbox-bf-v2.png height="400px") ![veach](images/a4/veach-bf-v2.png height="400px")
 
 # 3. Emitter Sampling Path Tracer (25pts)
 
@@ -132,9 +139,13 @@ python render.py integrator=path_ems scene=cbox spp=512
 python render.py integrator=path_ems scene=veach spp=256
 ```
 
-Reference results:
+Reference results 1:
 
 ![cbox](images/a4/cbox-ems.png height="400px") ![veach](images/a4/veach-ems.png height="400px")
+
+Reference results 2:
+
+![cbox](images/a4/cbox-ems-v2.png height="400px") ![veach](images/a4/veach-ems-v2.png height="400px")
 
 # 4. Multiple Importance Sampling (30pts)
 
@@ -165,9 +176,13 @@ python render.py integrator=path_mis scene=cbox spp=512
 python render.py integrator=path_mis scene=veach spp=128
 ```
 
-Reference results:
+Reference results 1:
 
 ![cbox](images/a4/cbox-mis.png height="400px") ![veach](images/a4/veach-mis.png height="400px")
+
+Reference results 2:
+
+![cbox](images/a4/cbox-mis-v2.png height="400px") ![veach](images/a4/veach-mis-v2.png height="400px")
 
 # Appendix. Useful APIs and Hints
 
