@@ -1,0 +1,275 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<link rel="stylesheet" href="site.css">
+
+**Assignment 5**
+
+_Advanced Computer Graphics (CMSC740), Fall 2022_
+
+!!! WARNING
+    This is a draft. Not published yet.
+
+In this assignment, you'll explore inverse rendering with differentiable path tracing and neural radiosity.
+
+!!! WARNING
+    The skeleton code repository has been updated to include necessary code for this assignment. Remember to pull and merge `origin/master` to your own branch.
+
+!!! NOTE
+    We'll provide a reference path tracer implementation to assist you with this assignment, which also include some skeleton code for neural radiosity.
+    As before, you need to submit Assignment 4 before you can be granted access.
+
+!!! NOTE
+    Although we introduce scene parameter optimization in Part 1, 2 and network training in Part 3, the number of parameters being optimized is small. Therefore, it should work well and take a reasonable amount of time to run all the experiments on the CPU. You still have the option to use our [GPU cluster](cluster.md.html) if it runs too slow on your computer.
+
+# 1. Inverse Rendering (30pts)
+
+## Background
+
+We can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF colors, etc.), and produce pixel colors. The resulting image is:
+
+\begin{align}
+I = F(X)
+\end{align}
+
+Inverse rendering solves this problem: if we already have a reference image of the scene $I^{*}$, how to obtain the parameters $X$? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the goal is to reconstruct the scene in a computer. $F$ is usually a hand crafted, physically-based, photorealistic integrator, such as a path tracer. A simple approach is to compute the difference:
+
+\begin{align}
+L(X) &= d(F(X), I^{*})
+\end{align}
+
+Here, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable, since we can then compute the gradient and use that to update $X$. That is,
+
+\begin{align}
+X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i})
+\end{align}
+
+As you can see, the process is carried out iteratively, and $\lambda$ is a hyperparameter to controll how much we update $X$ each time. This process is called **gradient descent**. While this equation illustrates the high level idea of how the optimization process works, the exact algorithm to update $X$ at each iteration has evolved a lot. The most popular choice since several years ago has been `Adam`, which we'll also use later.
+
+Conveniently, machine learning libraries like PyTorch can help you compute the gradients, and the update is called **backpropagation**. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
+
+!!! NOTE
+    You won't be asked to write the training / optimization loop. Watching and reading the materials will help you better understand what is going on.
+
+## Setup
+
+In Aris, the function $F$ is the integrator. We've been working with known scene parameters, all defined in the corresponding `yaml` config files. To make our lives easier, we prepared an all-diffuse scene, `cbox_diffuse`. For this modified `cbox` scene, if you open `config/scene/brdf/cbox_diffuse.yaml`, you'll see the type and parameters of all the materials. You can map them to the corresponding meshes in `config/scene/cbox_base.yaml`:
+
+```
+# scene/cbox_base.yaml
+- data/meshes/cbox/walls.obj
+- data/meshes/cbox/rightwall.obj
+- data/meshes/cbox/leftwall.obj
+- data/meshes/cbox/sphere1.obj
+- data/meshes/cbox/sphere2.obj
+- data/meshes/cbox/light.obj
+
+# scene/brdf/cbox_diffuse.yaml
+- name: diffuse
+  config:
+    color: [0.725, 0.71, 0.68]
+- name: diffuse
+  config:
+    color: [0.161, 0.133, 0.427]
+- name: diffuse
+  config:
+    color: [0.630, 0.065, 0.05]
+- name: diffuse
+  config:
+    color: [0.8, 0.8, 0.4]
+- name: diffuse
+  config:
+    color: [0.4, 0.8, 0.8]
+- name: diffuse
+  config:
+    color: [0.8, 0.8, 0.8]
+```
+
+So, you can see that the 2nd and 3rd diffuse BRDF has the color of the left and right walls. The scene looks like this:
+
+![Reference](images/a5/cbox-diffuse.png)
+
+To get started with inverse rendering, we need to render download the rendered image from [here](images/a5/cbox-diffuse.exr). Note that it is an `exr` file. Put the file under the `scripts` folder (create it yourself, it is excluded from git).
+
+```bash
+# Command to generate reference, you don't need to run this
+python render.py scene=cbox_diffuse integrator=path_mis spp=512 save_exr=true
+```
+
+!!! NOTE
+    We use EXR file because it stores the original output (radiance) from the integrator, also known as a linear color space. The PNG image has the pixel values tone-mapped to [0, 1] in the sRGB color space for display.
+
+## Reconstruct the Walls (10pts)
+
+First, read `train.py` and follow the comments to get an idea of how it works. Ask about whatever is unclear on Piazza. Also, check `aris/config/train_config.py` and `config/train_render.yaml` to understand what command line options are available.
+
+!!! NOTE
+    For this part, ignore the `mode == "nerad"` parts. They'll be explained in the last part of this assignment.
+
+Now, take a look at `config/scene/brdf/cbox_train_diffuse.yaml`. The material of the walls are replaced by `learned_diffuse`. The source code is in `aris/brdf/learned_diffuse.py`. It's almost identical to `diffuse.py`, with two important differences:
+
+1. The `LearnedDiffuseBrdf` class is a subclass of `nn.Module`. This is the general practice in PyTorch to model trainable objects (see [documentation](https://pytorch.org/docs/stable/generated/torch.nn.Module.html)).
+1. The color tensor is no longer given as input. Instead, they're initialized to gray and are trainable (`requires_grad=True`) `nn.Parameter` objects.
+
+!!! NOTE
+    In the rest of this assignment, feel free to modify train.py and other provided code to fit your needs. Make sure you document the important changes in your report.
+
+You can now run the following command to try optimizing the color of the walls. By default, training runs for 4,000 steps, and a full image is rendered every 1,000 steps to show the progress. **Windows users: replace \ by `**
+
+```bash
+python train.py --config-name train_render \
+    scene=cbox_train_diffuse \
+    gt=./scripts/cbox-diffuse.exr
+```
+
+You'll see a progress bar showing not only the remaining time, but also the latest loss. To monitor the progress, you can also run Tensorboard in the output folder:
+
+```bash
+tensorboard --logdir tensorboard
+```
+
+After training (several minutes depending on your machine), you can find in the output folder:
+
+- `checkpoints`, the optimized parameters (in this case, colors of the two walls)
+- `tensorboard`, folder of tensorboard data (we log the losses over training)
+- `visualization`, renderings of the image at different steps
+
+The renders in the `visualization` folder is a lower spp than usual (default is 32) to reduce time consumption during training. To get a better quality rendering with your trained models, you need to load them in `render.py`.
+
+!!! NOTE
+    You should take a note of the path to the `ckpt` file you just trained. Better, copy it to a safe location, such as a folder tracked by git.
+
+## Loading the Models (20pts)
+
+The provided training code saves the optimized parameters to `ckpt` files periodically. To use them for rendering with other configuration (spp, integrator, etc.), implement checkpoint loading in `render.py`. You need to do the following:
+
+1. Add a `checkpoint` option in `RenderConfig` that has type `Optional[str]`
+1. Add a line `checkpoint:` to `config/render.yaml`, so by default no checkpoint is specified
+1. In the `main()` function of `train.py`, :
+    1. Get all the scene components that are trained, and call `.train(False)`
+        1. Hint: refer to `render.py` but don't create optimizers
+    1. If `cfg.checkpoint` is not None, load the ckpt file and call `load_state_dict` function of the trained components
+    1. To prevent expensive gradient computation, add a `@torch.no_grad()` annotator to the `render_block()` function in `train.py`
+
+Then, load your trained model and render an images with higher spp.
+
+```bash
+python render.py scene=cbox_train_diffuse \
+    integrator=path_mis \
+    spp=128 \
+    checkpoint=./scripts/cbox-diffuse-walls-step4000.ckpt
+```
+
+![trained-128spp](images/a5/cbox-train-walls-step4000-spp128.png)
+
+Now, render another image with the `albedo` integrator, which visualizes the color of the BRDF. For a better comparison, also render the albedo with the 2000-step checkpoint:
+
+```
+python render.py scene=cbox_train_diffuse \
+    integrator=albedo \
+    spp=32 \
+    checkpoint=./scripts/cbox-diffuse-walls-step2000.ckpt
+
+python render.py scene=cbox_train_diffuse \
+    integrator=albedo \
+    spp=32 \
+    checkpoint=./scripts/cbox-diffuse-walls-step4000.ckpt
+```
+
+You can see how the optimization pull the albedo towards ground truth, but has not arrived yet:
+
+![albedo-2000](images/a5/cbox-train-walls-step2000-albedo.png height="300px") ![albedo-4000](images/a5/cbox-train-walls-step4000-albedo.png height="300px") ![albedo-gt](images/a5/cbox-diffuse-albedo.png height="300px")
+
+If you are interested, you can experiment with longer trainings and different learning rates.
+
+# 2. Limiting Path Length (20pts)
+
+`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it is often desirable to limit the number of bounces that a ray can travel. As an extreme example, we only allow the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
+
+Now, repeat the above training experiments, but limiting `max_path_length` to `2` in the path tracer (see command below, we provide a `path_mis_clip.yaml` that sets it already). Training should run faster because the rays are terminated at second bounce.
+
+```bash
+python train.py --config-name train_render \
+    integrator=path_mis_clip \
+    scene=cbox_train_diffuse \
+    gt=./scripts/cbox-diffuse.exr
+```
+
+Then, render the albedo map as before:
+
+```bash
+python render.py scene=cbox_train_diffuse \
+    integrator=albedo \
+    spp=32 \
+    checkpoint=./scripts/clip-step4000.ckpt
+```
+
+Compare the results against ground truth and what you got from Part 1. What do you observe (hint: brightness)? Discuss this in your report.
+
+# 3. Neural Radiosity (50pts)
+
+The Neural Radiosity technique provides a solution to the above problem by accounting for global illumination.
+
+## Training Neural Radiosity (15pts)
+
+In the provided `path.py` code, we already implemented part of the `render_nerad()` function. In particular, the `LHS` computation is complete. You'll complete the `RHS` computation in the next section. But before that, you may have noticed that some blanks that are left out in `train.py`. Fill in those blanks to enable training of neural radiosity.
+
+After filling the blanks, launch training with:
+
+```bash
+python train.py --config-name train_nerad \
+    scene=cbox_train_diffuse \
+    gt=./scripts/cbox-diffuse.exr
+```
+
+Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Include them in your report.
+
+In the provided code, `RHS` is set to be the result of ordinary path tracing. This is a placeholder to make sure that you can run training and get some reasonable results, but it's not how neural radiosity works. In fact, the results will be closer to Part 2.
+
+## Running Neural Radiosity (25pts)
+
+
+Remove the placeholder `RHS` computation and implement your own. Launch training with the same command as before. Your training should be faster and more effective.
+
+
+## Rendering Neural Radiosity (10pts)
+
+Finally, add the relevant code in `render.py` to load and render with a pretrained neural radiosity model.
+
+!!! NOTE
+    While in `train.py` we save both `lhs` and `rhs` renderings during visualization, for render purpose we only need to use `rhs` as output.
+
+Making the following changes should be sufficient:
+
+1. Add the `mode` option to `RenderConfig`
+1. Init and load integrator from checkpoint in `nerad` mode
+1. Modify `render_block()` to handle `nerad` mode
+
+You should be able to run the following commands and produce (1) a high quality rendering of the trained scene, (2) albedo renderings.
+
+```bash
+python render.py scene=cbox_train_diffuse \
+    mode=nerad \
+    integrator=path_mis_clip \
+    spp=128 \
+    checkpoint=./scripts/nerad-step4000.ckpt
+
+python render.py scene=cbox_train_diffuse \
+    integrator=albedo \
+    spp=32 \
+    checkpoint=./scripts/nerad-step2000.ckpt
+
+python render.py scene=cbox_train_diffuse \
+    integrator=albedo \
+    spp=32 \
+    checkpoint=./scripts/nerad-step4000.ckpt
+```
+
+Example outputs (your results may vary):
+
+![nerad-128spp](images/a5/nerad-step4000-spp128.png)
+
+![albedo-2000](images/a5/nerad-step2000-albedo.png height="300px") ![albedo-4000](images/a5/nerad-step4000-albedo.png height="300px") ![albedo-gt](images/a5/cbox-diffuse-albedo.png height="300px")
+
+You can try with different learning rates and number of steps to see how the results change.
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
