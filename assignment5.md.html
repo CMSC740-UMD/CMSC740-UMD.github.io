@@ -8,7 +8,7 @@ _Advanced Computer Graphics (CMSC740), Fall 2022_
 !!! WARNING
     This is a draft. Not published yet.
 
-In this assignment, you'll explore inverse rendering with differentiable path tracing and neural radiosity. You will perform "toy experiments" where you will recover the diffuse BRDF parameters of some scene elements based on given ground truth images of the scene.
+In this assignment, you'll explore inverse rendering with two different, physics-based rendering approaches: differentiable [path tracing](https://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Path_Tracing) and differentiable [neural radiosity](https://arxiv.org/abs/2105.12319). You will perform "toy experiments" where you will recover the diffuse BRDF parameters of some scene elements based on given ground truth images of the scene.
 
 !!! WARNING
     The skeleton code repository has been updated to include necessary code for this assignment. Remember to pull and merge `origin/master` to your own branch.
@@ -24,36 +24,38 @@ In this assignment, you'll explore inverse rendering with differentiable path tr
 
 ## Background
 
-In general, we can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF parameters, camera parameters, light sources, etc.), and producing pixel colors. The resulting image is
+In general, we can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF parameters, camera parameters, light sources, etc.), and producing pixel colors. The resulting image $I$ is simply written as
 
 \begin{align}
 I = F(X).
 \end{align}
 
-Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with a rendering function $F$ that implements a physically-based, photorealistic integrator to solve the rendering equation, such as a path tracer or neural radiosity. However, your inverse rendering experiment will be a "toy problem": you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters). 
+Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$ that produce this reference image? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with rendering functions $F$ that solve the rendering equation, such as a path tracer or neural radiosity. However, to keep things simple your inverse rendering experiments will be "toy problems": you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters). 
 
 For inverse rendering, the difference between the desired ground truth image $I^{*}$ and the rendered image $F(X)$ needs to be quantified using a scalar loss function $L(X)$,
 
 \begin{align}
-L(X) &= d(F(X), I^{*}),
+L(X) &= d(F(X) - I^{*}),
 \end{align}
 
-where, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ (or a subset thereof) to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable. Then we can compute the gradient and use that to update $X$ using iterative **gradient descent**. That is,
+where, $d$ is a [norm](https://en.wikipedia.org/wiki/Norm_(mathematics)) such as the $L_1$ or $L_2$ norm. $L$ is called the image reconstruction loss. Now, our goal is to optimize the parameters $X$ (or a subset thereof) to minimize the loss $L(X)$. This optimization process to minimize the loss function is called **training** in machine learning terminology.
+
+Mathematically, it would be very convenient if $F$ is differentiable. Then we can compute the gradient and use that to update $X$ using iterative [gradient descent](https://en.wikipedia.org/wiki/Gradient_descent) to perform the optimization. That is,
 
 \begin{align}
 X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i}),
 \end{align}
 
-where $\lambda$ is a hyperparameter to control how much we update $X$ each time.  While this equation illustrates the high level idea of how the optimization process works, variations of this approach are typically used in practice. The most popular choice is often the so called [Adam](https://arxiv.org/pdf/1412.6980) algorithm, which we'll also use later. This optimization process is called **training** in machine learning terminology.
+where $\lambda$ is a hyperparameter to control how much we update $X$ each time.  While this equation illustrates the high level idea of the optimization process, variations of gradient descent are typically used in practice. The most popular choice is often the so called [Adam](https://arxiv.org/pdf/1412.6980) algorithm, which we'll also use later. 
 
-Conveniently, machine learning libraries like PyTorch can help you compute the gradients using [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation), which is also called [backpropagation](https://en.wikipedia.org/wiki/Backpropagation) in the context of neural networks. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
+Conveniently, machine learning libraries like PyTorch can automatically compute the gradients for you using [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation), which is also called [backpropagation](https://en.wikipedia.org/wiki/Backpropagation) in the context of neural networks. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
 
 !!! NOTE
     You won't be asked to write the training / optimization loop. Watching and reading the materials will help you better understand what is going on.
 
 ## Setup
 
-In Aris, the rendering function $F$ is implemented by the integrator. We've been working with known scene parameters, all defined in the corresponding `yaml` config files. To make our lives easier, we prepared an all-diffuse scene, `cbox_diffuse`. For this modified `cbox` scene, if you open `config/scene/brdf/cbox_diffuse.yaml`, you'll see the type and parameters of all the materials. You can map them to the corresponding meshes in `config/scene/cbox_base.yaml`:
+In Aris, the rendering function $F$ is implemented by the integrator. So far, we've been working with completely known scene parameters, all defined in the corresponding `yaml` config files. For the experiments here, we prepared an all-diffuse scene `cbox_diffuse`. For this modified `cbox` scene, if you open `config/scene/brdf/cbox_diffuse.yaml`, you'll see the type and parameters of all the materials. You can map them to the corresponding meshes in `config/scene/cbox_base.yaml`:
 
 ```
 # scene/cbox_base.yaml
@@ -85,11 +87,11 @@ In Aris, the rendering function $F$ is implemented by the integrator. We've been
     color: [0.8, 0.8, 0.8]
 ```
 
-So, you can see that the 2nd and 3rd diffuse BRDF has the color of the left and right walls. The scene looks like this:
+So, you can see that the 2nd and 3rd diffuse BRDF have the colors of the left and right walls. The scene looks like this:
 
 ![Reference](images/a5/cbox-diffuse.png)
 
-To get started with inverse rendering, we need to download the rendered **ground truth image** from [here](images/a5/cbox-diffuse.exr). Note that it is an `exr` file. Put the file under the `scripts` folder (create it yourself, it is excluded from git).
+To get started with inverse rendering, we need to download the rendered **ground truth image** from [here](images/a5/cbox-diffuse.exr). This is the image we will try to match using inverse rendering. Note that it is an `exr` file. Put the file under the `scripts` folder (create it yourself, it is excluded from git).
 
 ```bash
 # Command to generate reference, you don't need to run this
@@ -101,7 +103,7 @@ python render.py scene=cbox_diffuse integrator=path_mis spp=512 save_exr=true
 
 ## Reconstruct the Diffuse BRDFs of the Walls (10pts)
 
-In this exercise you will assume the diffuse BRDFs of the walls in the cbox scene are unknown, and you will reconstruct them by inverse rendering to match the ground truth image. First, read `train.py` and follow the comments to get an idea of how training works. Ask about whatever is unclear on Piazza. Also, check `aris/config/train_config.py` and `config/train_render.yaml` to understand what command line options are available.
+In this exercise you will now assume the diffuse BRDFs of the walls in the cbox scene are unknown, and you will reconstruct them by inverse rendering to match the ground truth image. First, read `train.py` and follow the comments to get an idea of how training works. Ask about whatever is unclear on Piazza. Also, check `aris/config/train_config.py` and `config/train_render.yaml` to understand what command line options are available.
 
 !!! NOTE
     For this part, ignore the `mode == "nerad"` parts. They'll be explained in the last part of this assignment.
@@ -184,7 +186,7 @@ If you are interested, you can experiment with longer trainings and different le
 
 # 2. Limiting Path Length (20pts)
 
-`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it is often desirable to limit the number of bounces that a ray can travel. As an extreme example, we could reduce computation time by only allowing the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
+`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it would be desirable to limit the number of bounces that a ray can travel, which would limit computation time. As an extreme example, we could reduce only allow the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
 
 Now, repeat the above training experiments, but limiting `max_path_length` to `2` in the path tracer (see command below, we provide a `path_mis_clip.yaml` that sets it already). Training should run faster because the rays are terminated at second bounce.
 
@@ -204,7 +206,7 @@ python render.py scene=cbox_train_diffuse \
     checkpoint=./scripts/clip-step4000.ckpt
 ```
 
-Compare the results against ground truth and what you got from Part 1. What do you observe (hint: brightness)? Discuss this in your report.
+Compare the results against ground truth and what you got from Part 1. What do you observe (hint: brightness)? Why does this happen? Discuss this in your report.
 
 # 3. Neural Radiosity (50pts)
 
@@ -224,7 +226,7 @@ python train.py --config-name train_nerad \
 
 Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Include them in your report.
 
-In the provided code, `RHS` is set to be the result of ordinary path tracing. This is a placeholder to make sure that you can run training and get some reasonable results, but it's not how neural radiosity works. In fact, the results will be closer to Part 2.
+You will notice that in the provided code, `RHS` is set to be the result of ordinary path tracing. This is just a placeholder to make sure that you can run training and get some reasonable results, but it's not how neural radiosity works. In fact, the results will be closer to Part 2. You will implement the actual RHS computation for neural radiosity in the next part.
 
 ## Running Neural Radiosity (25pts)
 
