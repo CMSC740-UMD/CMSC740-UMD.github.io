@@ -24,10 +24,12 @@ In this assignment, you'll explore inverse rendering with differentiable path tr
 
 ## Background
 
-In general, we can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF parameters, camera parameters, light sources, etc.), and producing pixel colors. The resulting image is:
+In general, we can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF parameters, camera parameters, light sources, etc.), and producing pixel colors. The resulting image is
+
 \begin{align}
-I = F(X)
+I = F(X).
 \end{align}
+
 Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with a rendering function $F$ that implements a physically-based, photorealistic integrator to solve the rendering equation, such as a path tracer or neural radiosity. However, your inverse rendering experiment will be a "toy problem": you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters). 
 
 For inverse rendering, the difference between the desired ground truth image $I^{*}$ and the rendered image $F(X)$ needs to be quantified using a scalar loss function $L(X)$,
@@ -36,22 +38,22 @@ For inverse rendering, the difference between the desired ground truth image $I^
 L(X) &= d(F(X), I^{*}),
 \end{align}
 
-where, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable, since we can then compute the gradient and use that to update $X$. That is,
+where, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ (or a subset thereof) to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable. Then we can compute the gradient and use that to update $X$ using iterative **gradient descent**. That is,
 
 \begin{align}
-X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i})
+X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i}),
 \end{align}
 
-As you can see, the process is carried out iteratively, and $\lambda$ is a hyperparameter to controll how much we update $X$ each time. This process is called **gradient descent**. While this equation illustrates the high level idea of how the optimization process works, the exact algorithm to update $X$ at each iteration has evolved a lot. The most popular choice since several years ago has been `Adam`, which we'll also use later.
+where $\lambda$ is a hyperparameter to control how much we update $X$ each time.  While this equation illustrates the high level idea of how the optimization process works, variations of this approach are typically used in practice. The most popular choice is often the so called [Adam](https://arxiv.org/pdf/1412.6980) algorithm, which we'll also use later. This optimization process is called **training** in machine learning terminology.
 
-Conveniently, machine learning libraries like PyTorch can help you compute the gradients, and the update is called **backpropagation**. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
+Conveniently, machine learning libraries like PyTorch can help you compute the gradients using [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation), which is also called [backpropagation](https://en.wikipedia.org/wiki/Backpropagation) in the context of neural networks. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
 
 !!! NOTE
     You won't be asked to write the training / optimization loop. Watching and reading the materials will help you better understand what is going on.
 
 ## Setup
 
-In Aris, the function $F$ is the integrator. We've been working with known scene parameters, all defined in the corresponding `yaml` config files. To make our lives easier, we prepared an all-diffuse scene, `cbox_diffuse`. For this modified `cbox` scene, if you open `config/scene/brdf/cbox_diffuse.yaml`, you'll see the type and parameters of all the materials. You can map them to the corresponding meshes in `config/scene/cbox_base.yaml`:
+In Aris, the rendering function $F$ is implemented by the integrator. We've been working with known scene parameters, all defined in the corresponding `yaml` config files. To make our lives easier, we prepared an all-diffuse scene, `cbox_diffuse`. For this modified `cbox` scene, if you open `config/scene/brdf/cbox_diffuse.yaml`, you'll see the type and parameters of all the materials. You can map them to the corresponding meshes in `config/scene/cbox_base.yaml`:
 
 ```
 # scene/cbox_base.yaml
@@ -87,7 +89,7 @@ So, you can see that the 2nd and 3rd diffuse BRDF has the color of the left and 
 
 ![Reference](images/a5/cbox-diffuse.png)
 
-To get started with inverse rendering, we need to render download the rendered image from [here](images/a5/cbox-diffuse.exr). Note that it is an `exr` file. Put the file under the `scripts` folder (create it yourself, it is excluded from git).
+To get started with inverse rendering, we need to download the rendered **ground truth image** from [here](images/a5/cbox-diffuse.exr). Note that it is an `exr` file. Put the file under the `scripts` folder (create it yourself, it is excluded from git).
 
 ```bash
 # Command to generate reference, you don't need to run this
@@ -97,22 +99,22 @@ python render.py scene=cbox_diffuse integrator=path_mis spp=512 save_exr=true
 !!! NOTE
     We use EXR file because it stores the original output (radiance) from the integrator, also known as a linear color space. The PNG image has the pixel values tone-mapped to [0, 1] in the sRGB color space for display.
 
-## Reconstruct the Walls (10pts)
+## Reconstruct the Diffuse BRDFs of the Walls (10pts)
 
-First, read `train.py` and follow the comments to get an idea of how it works. Ask about whatever is unclear on Piazza. Also, check `aris/config/train_config.py` and `config/train_render.yaml` to understand what command line options are available.
+In this exercise you will assume the diffuse BRDFs of the walls in the cbox scene are unknown, and you will reconstruct them by inverse rendering to match the ground truth image. First, read `train.py` and follow the comments to get an idea of how training works. Ask about whatever is unclear on Piazza. Also, check `aris/config/train_config.py` and `config/train_render.yaml` to understand what command line options are available.
 
 !!! NOTE
     For this part, ignore the `mode == "nerad"` parts. They'll be explained in the last part of this assignment.
 
-Now, take a look at `config/scene/brdf/cbox_train_diffuse.yaml`. The material of the walls are replaced by `learned_diffuse`. The source code is in `aris/brdf/learned_diffuse.py`. It's almost identical to `diffuse.py`, with two important differences:
+Now, take a look at `config/scene/brdf/cbox_train_diffuse.yaml`. The materials of the walls are replaced by `learned_diffuse`. The source code is in `aris/brdf/learned_diffuse.py`. It's almost identical to `diffuse.py`, with two important differences:
 
-1. The `LearnedDiffuseBrdf` class is a subclass of `nn.Module`. This is the general practice in PyTorch to model trainable objects (see [documentation](https://pytorch.org/docs/stable/generated/torch.nn.Module.html)).
+1. The `LearnedDiffuseBrdf` class is a subclass of `nn.Module`. This is the general practice in PyTorch to model trainable objects (see [documentation](https://pytorch.org/docs/stable/generated/torch.nn.Module.html)), that is, the scene parameters that we will optimize. PyTorch will use automatic differentiation to compute gradients with respect to these trainable objects.
 1. The color tensor is no longer given as input. Instead, they're initialized to gray and are trainable (`requires_grad=True`) `nn.Parameter` objects.
 
 !!! NOTE
     In the rest of this assignment, feel free to modify train.py and other provided code to fit your needs. Make sure you document the important changes in your report.
 
-You can now run the following command to try optimizing the color of the walls. By default, training runs for 4,000 steps, and a full image is rendered every 1,000 steps to show the progress. **Windows users: replace \ by `**
+You can now run the following command to try optimizing the color of the walls such that the rendered image matches with the ground truth. By default, training runs for 4,000 gradient descent steps, and a full image is rendered every 1,000 steps to show the progress. **Windows users: replace \ by `**
 
 ```bash
 python train.py --config-name train_render \
@@ -132,14 +134,14 @@ After training (several minutes depending on your machine), you can find in the 
 - `tensorboard`, folder of tensorboard data (we log the losses over training)
 - `visualization`, renderings of the image at different steps
 
-The renders in the `visualization` folder is a lower spp than usual (default is 32) to reduce time consumption during training. To get a better quality rendering with your trained models, you need to load them in `render.py`.
+The renders in the `visualization` folder use a lower number of samples per pixel (spp) than usual (default is 32) to reduce time consumption during training. To get a better quality rendering with your trained models, you need to load them in `render.py`.
 
 !!! NOTE
     You should take a note of the path to the `ckpt` file you just trained. Better, copy it to a safe location, such as a folder tracked by git.
 
-## Loading the Models (20pts)
+## Loading the Trained Models and Rendering Them (20pts)
 
-The provided training code saves the optimized parameters to `ckpt` files periodically. To use them for rendering with other configuration (spp, integrator, etc.), implement checkpoint loading in `render.py`. You need to do the following:
+The provided training code saves the optimized parameters to `ckpt` files periodically. To use them for rendering with other configurations (spp, integrator, etc.), implement checkpoint loading in `render.py`. You need to do the following:
 
 1. Add a `checkpoint` option in `RenderConfig` that has type `Optional[str]`
 1. Add a line `checkpoint:` to `config/render.yaml`, so by default no checkpoint is specified
@@ -174,7 +176,7 @@ python render.py scene=cbox_train_diffuse \
     checkpoint=./scripts/cbox-diffuse-walls-step4000.ckpt
 ```
 
-You can see how the optimization pull the albedo towards ground truth, but has not arrived yet:
+You can see how the optimization pulls the albedo (diffuse BRDF) towards the ground truth, but has not arrived yet:
 
 ![albedo-2000](images/a5/cbox-train-walls-step2000-albedo.png height="300px") ![albedo-4000](images/a5/cbox-train-walls-step4000-albedo.png height="300px") ![albedo-gt](images/a5/cbox-diffuse-albedo.png height="300px")
 
@@ -206,11 +208,11 @@ Compare the results against ground truth and what you got from Part 1. What do y
 
 # 3. Neural Radiosity (50pts)
 
-The Neural Radiosity technique provides a solution to the above problem by accounting for global illumination.
+The [Neural Radiosity](https://arxiv.org/abs/2105.12319) technique (as discussed in the class) provides a solution to the above problem by accounting for global illumination, but without sampling longer paths as in path tracing.
 
 ## Training Neural Radiosity (15pts)
 
-In the provided `path.py` code, we already implemented part of the `render_nerad()` function. In particular, the `LHS` computation is complete. You'll complete the `RHS` computation in the next section. But before that, you may have noticed that some blanks that are left out in `train.py`. Fill in those blanks to enable training of neural radiosity.
+In the provided `path.py` code, we already implemented part of the `render_nerad()` function. In particular, the `LHS` computation is complete. You'll complete the `RHS` computation in the next section. But before that, you may have noticed some blanks that are left out in `train.py`. Fill in those blanks to enable training of neural radiosity.
 
 After filling the blanks, launch training with:
 
@@ -227,7 +229,7 @@ In the provided code, `RHS` is set to be the result of ordinary path tracing. Th
 ## Running Neural Radiosity (25pts)
 
 
-Remove the placeholder `RHS` computation and implement your own. Launch training with the same command as before. Your training should be faster and more effective.
+Remove the placeholder `RHS` computation and implement your own, using the actual neural radiosity approach. Launch training with the same command as before. Your training should be faster and more effective.
 
 
 ## Rendering Neural Radiosity (10pts)
