@@ -8,7 +8,7 @@ _Advanced Computer Graphics (CMSC740), Fall 2022_
 !!! WARNING
     This is a draft. Not published yet.
 
-In this assignment, you'll explore inverse rendering with differentiable path tracing and neural radiosity.
+In this assignment, you'll explore inverse rendering with differentiable path tracing and neural radiosity. You will perform ``toy experiments'' where you will recover the diffuse BRDF parameters of some scene elements based on given ground truth images of the scene.
 
 !!! WARNING
     The skeleton code repository has been updated to include necessary code for this assignment. Remember to pull and merge `origin/master` to your own branch.
@@ -24,19 +24,21 @@ In this assignment, you'll explore inverse rendering with differentiable path tr
 
 ## Background
 
-We can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF colors, etc.), and produce pixel colors. The resulting image is:
+In general, we can view the process of rendering as a function $F$ taking in scene parameters $X$ (mesh locations, BRDF parameters, camera paraemters, light sources, etc.), and producing pixel colors. The resulting image is:
 
 \begin{align}
 I = F(X)
 \end{align}
 
-Inverse rendering solves this problem: if we already have a reference image of the scene $I^{*}$, how to obtain the parameters $X$? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the goal is to reconstruct the scene in a computer. $F$ is usually a hand crafted, physically-based, photorealistic integrator, such as a path tracer. A simple approach is to compute the difference:
+Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with a rendering function $F$ that implements a physically-based, photorealistic integrator to solve the rendering equation, such as a path tracer or neural radiosity. However, your inverse rendering experiment will be a ``toy problem'': you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters). 
+
+For inverse rendering, the difference between the desired ground truth image $I^{*}$ and the rendered image $F(X)$ needs to be quantified using a scalar loss function $L(X)$,
 
 \begin{align}
-L(X) &= d(F(X), I^{*})
+L(X) &= d(F(X), I^{*}),
 \end{align}
 
-Here, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable, since we can then compute the gradient and use that to update $X$. That is,
+where, $d$ is a distance function, such as L1 or L2 distance. $L$ is called the image reconstruction loss. Then, we can optimize the parameters $X$ to minimize $L$. Mathematically, it would be very convenient if $F$ is differentiable, since we can then compute the gradient and use that to update $X$. That is,
 
 \begin{align}
 X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i})
