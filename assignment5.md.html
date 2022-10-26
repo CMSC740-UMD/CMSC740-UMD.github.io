@@ -35,7 +35,7 @@ For inverse rendering, the difference between the desired ground truth image $I^
 L(X) &= d(F(X) - I^{*}),
 \end{align}
 
-where, $d$ is a [norm](https://en.wikipedia.org/wiki/Norm_(mathematics)) such as the $L_1$ or $L_2$ norm. $L$ is called the image reconstruction loss. Now, our goal is to optimize the parameters $X$ (or a subset thereof) to minimize the loss $L(X)$. This optimization process to minimize the loss function is called **training** in machine learning terminology.
+where, $d$ is a [norm](https://en.wikipedia.org/wiki/Norm_(mathematics) ) such as the $L_1$ or $L_2$ norm. $L$ is called the image reconstruction loss. Now, our goal is to optimize the parameters $X$ (or a subset thereof) to minimize the loss $L(X)$. This optimization process to minimize the loss function is called **training** in machine learning terminology.
 
 Mathematically, it would be very convenient if $F$ is differentiable. Then we can compute the gradient and use that to update $X$ using iterative [gradient descent](https://en.wikipedia.org/wiki/Gradient_descent) to perform the optimization. That is,
 
