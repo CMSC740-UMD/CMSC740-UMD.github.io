@@ -184,7 +184,7 @@ If you are interested, you can experiment with longer trainings and different le
 
 # 2. Limiting Path Length (20pts)
 
-`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it is often desirable to limit the number of bounces that a ray can travel. As an extreme example, we only allow the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
+`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it is often desirable to limit the number of bounces that a ray can travel. As an extreme example, we could reduce computation time by only allowing the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
 
 Now, repeat the above training experiments, but limiting `max_path_length` to `2` in the path tracer (see command below, we provide a `path_mis_clip.yaml` that sets it already). Training should run faster because the rays are terminated at second bounce.
 
@@ -208,7 +208,7 @@ Compare the results against ground truth and what you got from Part 1. What do y
 
 # 3. Neural Radiosity (50pts)
 
-The [Neural Radiosity](https://arxiv.org/abs/2105.12319) technique (as discussed in the class) provides a solution to the above problem by accounting for global illumination, but without sampling longer paths as in path tracing.
+The [Neural Radiosity](https://arxiv.org/abs/2105.12319) technique (as discussed in the class) accounts for global illumination, but by creating only paths of length two similar as above. In this experiment, you will show that inverse rendering using neural radiosity indeed works to recover the diffuse BRDF.
 
 ## Training Neural Radiosity (15pts)
 
