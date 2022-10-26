@@ -186,9 +186,9 @@ If you are interested, you can experiment with longer trainings and different le
 
 # 2. Limiting Path Length (20pts)
 
-`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it would be desirable to limit the number of bounces that a ray can travel, which would limit computation time. As an extreme example, we could reduce only allow the ray to bounce once: from the first hit point of the camera ray. In other words, the ray will hit at most two objects.
+`cbox` is just a simple example, and in real-world applications the scenes are generally much more complicated. Therefore, it would be desirable to limit the number of bounces that a ray can travel, which would limit computation time. As an extreme example, we could allow rays to bounce only once at the first hit point of the camera ray. In other words, the ray will hit at most two objects.
 
-Now, repeat the above training experiments, but limiting `max_path_length` to `2` in the path tracer (see command below, we provide a `path_mis_clip.yaml` that sets it already). Training should run faster because the rays are terminated at second bounce.
+To implement this, repeat the above training experiments, but limiting `max_path_length` to `2` in the path tracer (see command below, we provide a `path_mis_clip.yaml` that sets it already). Training should run faster because the rays are terminated at second bounce.
 
 ```bash
 python train.py --config-name train_render \
