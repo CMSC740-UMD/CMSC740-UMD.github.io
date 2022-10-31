@@ -27,7 +27,7 @@ In general, we can view the process of rendering as a function $F$ taking in sce
 I = F(X).
 \end{align}
 
-Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$ that produce this reference image? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with rendering functions $F$ that solve the rendering equation, such as a path tracer or neural radiosity. However, to keep things simple your inverse rendering experiments will be "toy problems": you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters). 
+Inverse rendering solves the following problem: if we are given a reference image of the scene $I^{*}$, how to obtain unknown scene parameters $X$ that produce this reference image? In practice, $I^{*}$ is often a photograph (or many photos from different angles), and the ultimate goal is to reconstruct all scene parameters. In this assignment, you will work with rendering functions $F$ that solve the rendering equation, such as a path tracer or neural radiosity. However, to keep things simple your inverse rendering experiments will be "toy problems": you will only recover some diffuse BRDF parameters and assume everything else is known (geometry, light sources, camera parameters).
 
 For inverse rendering, the difference between the desired ground truth image $I^{*}$ and the rendered image $F(X)$ needs to be quantified using a scalar loss function $L(X)$,
 
@@ -43,7 +43,7 @@ Mathematically, it would be very convenient if $F$ is differentiable. Then we ca
 X_{i+1} \leftarrow X_{i} - \lambda \nabla L(X_{i}),
 \end{align}
 
-where $\lambda$ is a hyperparameter to control how much we update $X$ each time.  While this equation illustrates the high level idea of the optimization process, variations of gradient descent are typically used in practice. The most popular choice is often the so called [Adam](https://arxiv.org/pdf/1412.6980) algorithm, which we'll also use later. 
+where $\lambda$ is a hyperparameter to control how much we update $X$ each time.  While this equation illustrates the high level idea of the optimization process, variations of gradient descent are typically used in practice. The most popular choice is often the so called [Adam](https://arxiv.org/pdf/1412.6980) algorithm, which we'll also use later.
 
 Conveniently, machine learning libraries like PyTorch can automatically compute the gradients for you using [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation), which is also called [backpropagation](https://en.wikipedia.org/wiki/Backpropagation) in the context of neural networks. If you have little experience with machine learning, it's recommended that you watch [this series of videos](https://www.youtube.com/watch?v=aircAruvnKk) to get a better understanding, and then follow [this tutorial](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) to see how the ideas are translated to code.
 
