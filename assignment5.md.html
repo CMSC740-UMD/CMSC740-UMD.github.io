@@ -144,11 +144,11 @@ The provided training code saves the optimized parameters to `ckpt` files period
 
 1. Add a `checkpoint` option in `RenderConfig` that has type `Optional[str]`
 1. Add a line `checkpoint:` to `config/render.yaml`, so by default no checkpoint is specified
-1. In the `main()` function of `train.py`, :
+1. In the `main()` function of `render.py`, :
     1. Get all the scene components that are trained, and call `.train(False)`
-        1. Hint: refer to `render.py` but don't create optimizers
+        1. Hint: refer to `train.py` but don't create optimizers
     1. If `cfg.checkpoint` is not None, load the ckpt file and call `load_state_dict` function of the trained components
-    1. To prevent expensive gradient computation, add a `@torch.no_grad()` annotator to the `render_block()` function in `train.py`
+    1. To prevent expensive gradient computation, add a `@torch.no_grad()` annotator to the `render_block()` function in `render.py`
 
 Then, load your trained model and render an images with higher spp.
 
