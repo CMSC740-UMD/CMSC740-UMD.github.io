@@ -224,7 +224,10 @@ python train.py --config-name train_nerad \
     gt=./scripts/cbox-diffuse.exr
 ```
 
-Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Include them in your report.
+Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Include them in your report after you complete the next part (correct RHS).
+
+!!! WARNING
+    In the provided report template, there is a question that ask you to include lhs and rhs from this part. Since you’ll no longer be able to render these images after completing the next part (correct RHS), you don’t have to answer the question. Feel free to skip it and only include images after you have implemented the correct RHS.
 
 You will notice that in the provided code, `RHS` is set to be the result of ordinary path tracing. This is just a placeholder to make sure that you can run training and get some reasonable results, but it's not how neural radiosity works. In fact, the results will be closer to Part 2. You will implement the actual RHS computation for neural radiosity in the next part.
 
