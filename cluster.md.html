@@ -3,7 +3,10 @@
 
 **Using the Cluster**
 
-_Advanced Computer Graphics (CMSC740), Fall 2022_
+_Advanced Computer Graphics (CMSC740), Fall 2023_
+
+!!! WARNING
+    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
 
 In assignment 5, we'll integrate machine learning into the rendering pipeline and explore inverse rendering. As machine learning involves optimization of neural networks, it is often computationally prohibitive on a CPU, and requires GPUs that are designed for this type of tasks. For a long time, the majority of machine learning libraries (PyTorch, Tensorflow, etc.) supports only one type of GPUs, namely CUDA-enabled Nvidia GPUs, because CUDA was the only feasible GPU computation framework available to the general public. Today, PyTorch also supports the ROCm framework from AMD, and is also experimenting with Apple's Metal framework. However, CUDA is still the most optimized and popular choice.
 
