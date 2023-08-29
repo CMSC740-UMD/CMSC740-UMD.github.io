@@ -14,16 +14,22 @@ The renderer itself is written in Python with PyTorch, and you'll set everything
 
 For every assignment you're expected to:
 
-- Implement some tasks in code and produce some rendering or screenshots.
+- Implement some tasks in code and produce some renderings or screenshots.
 - Write a report in `reports/assignment-x` (follow instructions in the assignments and provided templates).
-- The report is in [Markdeep](https://casual-effects.com/markdeep/features.md.html) format and templates are provided. Click the link to learn about the features.
-- Zip the entire `aris-renderer` folder (excluding `data` is preferred) and submit it to Canvas.
+  - The report is in [Markdeep](https://casual-effects.com/markdeep/features.md.html) format, which is an extension to Markdown. Click the link to learn about the features.
+  - The code produce renderings in a folder inside `outputs`. **Make sure that you copy the final results (images) to reports/assignment-x folder**. Do NOT refer to a path in the `outputs` folder in your report.
+- Use the provided script to create a zip file.
+  - Run this command: `python make_submission.py x`, where **x** is the assignment number (1, 2, 3, ...).
+  - The script gathers the required files and folders (`aris, config, reports/assignment-x, render.py, train.py`).
+  - Do not zip your entire folder and submit. Points will be deducted if you submit any of your `.git, data, outputs` folders.
+- The script produces `assignment-x.zip` in `outputs`. Submit the zip file on ELMS.
+  - You should extract the file outside of your project folder and check your report with a browser to make sure that all images have been correctly included.
 
-In the first assignment, you'll download the skeleton code that you'll work on for all the assignments. The skeleton already includes a `reports/assignment-1` folder that contains a template for the report of _Assignment 1_, and we'll add templates for other assignments when they're released.
+In the first assignment, you'll download the skeleton code that you'll work on for all the assignments.
 
 # Index
 
-- [Assignment 1: Getting Started, depth integrator, thin lense camera](#) (TBA 8/29)
+- [Assignment 1: Getting Started, depth integrator, thin lense camera](assignment1.md.html)
 <!-- - [Assignment 2: Sample warping, point lights, ambient occlusion](assignment2.md.html) -->
 <!-- - [Assignment 3: Area light sources, reflection and refraction, Whitted style ray tracing](assignment3.md.html) -->
 <!-- - [Assignment 4: Microfacet BRDF, path tracing](assignment4.md.html) -->

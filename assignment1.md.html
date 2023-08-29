@@ -5,9 +5,6 @@
 
 _Advanced Computer Graphics (CMSC740), Fall 2023_
 
-!!! WARNING
-    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
-
 In the first assignment you'll:
 
 - Setup your local environment and download the skeleton code.
@@ -19,12 +16,9 @@ In the first assignment you'll:
 
 Aris requires `Python 3.10`. You can get it in different ways, but the recommended method is:
 
-!!! WARNING
-    This section will be updated to use Python 3.10. Don't follow it right now.
-
-- Setup a [Conda environment](https://docs.conda.io/en/latest/miniconda.html)
+- Setup a [Miniconda environment](https://docs.conda.io/en/latest/miniconda.html)
   - **Highly recommended** for Windows users, also recommended for macOS and Linux users
-  - First time: `conda create --name aris python=3.9`
+  - First time: `conda create --name aris python=3.10`
   - To start working: `conda activate aris`
 
 Students who *already have their favorite Python environment managers* can continue to use those.
@@ -34,10 +28,10 @@ Within the Python environment, install the following packages:
 
 - [PyTorch](https://pytorch.org/get-started/locally/)
   - *GPU is not necessary.*
-  - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code much faster.
-  - Starting from assignment 3, you'll get access to a cluster with GPUs available. Details to be announced.
+  - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code faster.
+  - Later in the semester, you'll get access to a cluster with GPUs available. Details to be announced.
 - OpenEXR (native library)
-  - Conda users (_except_ Mac users), install [openexr](https://anaconda.org/conda-forge/openexr)
+  - Conda users (_except_ Mac users), install [openexr](https://anaconda.org/conda-forge/openexr) via Conda
   - Mac users (Conda or not), install with [Homebrew](https://formulae.brew.sh/formula/openexr)
   - Linux non-Conda users, install `libopenexr-dev`
 - OpenEXR (Python binding)
@@ -51,12 +45,15 @@ Within the Python environment, install the following packages:
     - Note: this assumes that your Homebrew is in the default location. Modify the paths as needed.
   - Linux users, use `pip install OpenEXR` (preferred; no exports needed) or Conda
 - Install these with `pip install`, even if you're using Conda
+  - One-liner command: `pip install hydra-core pillow opencv-python open3d tqdm plotly`
   - [hydra-core](https://pypi.org/project/hydra-core/)
   - [pillow](https://pypi.org/project/Pillow/)
   - [opencv-python](https://pypi.org/project/opencv-python/)
   - [open3d](https://pypi.org/project/open3d/)
   - [tqdm](https://pypi.org/project/tqdm/)
   - [plotly](https://pypi.org/project/plotly/)
+- Mac users, install `libomp` with [Homebrew](https://formulae.brew.sh/formula/libomp)
+
 - Run the following commands:
   ```bash
   pip uninstall ipywidgets
@@ -67,13 +64,7 @@ To check your installations, try the following and make sure there isn't any `Im
 
 ```
 $ python
->>> import torch
->>> import OpenEXR
->>> import cv2
->>> import tqdm
->>> import open3d
->>> import hydra
->>> import plotly
+>>> import torch, OpenEXR, cv2, tqdm, open3d, hydra, plotly
 ```
 
 ## Clone the code
@@ -82,7 +73,7 @@ Our code is provided as a [Git](https://git-scm.com/) repository, hosted on GitH
 Clone the skeleton code and **checkout your own branch** following these commands:
 
 ```bash
-git clone https://github.com/CMSC740-Fall22/aris-renderer-student.git aris-renderer
+git clone https://github.com/CMSC740-UMD/aris-renderer-student.git aris-renderer
 cd aris-renderer
 git checkout -b working
 ```
@@ -98,7 +89,7 @@ Once you setup VSCode, you can also install a Git extension (such as `Git Graphs
 
 ## Download Data
 
-Due to its size, the mesh and environment data is not included in the git repository. Download them from [Google Drive](https://drive.google.com/file/d/1E4bdOgKh4r8o94plEn68HpNRod1W9wMd/view?usp=sharing).
+Due to its size, the mesh and environment data is not included in the git repository. Download them from [Google Drive](https://drive.google.com/file/d/1lZ36xsJGmS9Y52xeqtHvM7vQVpXPJor0/view?usp=sharing).
 
 After extracting your folder should look like:
 
@@ -136,7 +127,7 @@ Before you start editing code, you need to also install an editor. The recommend
 - Install the `Python` extension.
 - Open the `aris-renderer` folder with VSCode.
 - Open `render.py` from the left (explorer) panel.
-- On the bottom-left corner, you'll probably see a Python interpreter found by VSCode (something like `3.9.12`). Click on it, and choose `Python 3.9.12 ('aris')` from the dropdown, i.e. the environment you've prepared in the previous steps.
+- On the bottom-left corner, you'll probably see a Python interpreter found by VSCode (something like `3.10.12`). Click on it, and choose `Python 3.10.12 ('aris')` from the dropdown, i.e. the environment you've prepared in the previous steps.
 - Install `pylint` when you see a prompt.
 - Press `Shift+Alt+F` (`Shift+Opt+F` on mac). Install `autopep8` following the prompt.
 
@@ -169,12 +160,14 @@ The [PyTorch documentation](https://pytorch.org/docs/stable/torch.html) is a use
 
 _Indexing_ the tensors is also very important. PyTorch tensors are similar to Numpy arrays in this context so most of [this Numpy tutorial](https://numpy.org/doc/stable/user/basics.indexing.html) works with PyTorch as well.
 
-!!! NOTE
-    VSCode has built-in jupyter notebook support. You can create a `playground.ipynb` to play with PyTorch, quickly test some functions, or debug your code.
+**VSCode has built-in jupyter notebook support.** You can create a `playground.ipynb` to play with PyTorch, quickly test some functions, or debug your code.
 
 ### PyTorch practices
 
-Do the following practices if PyTorch is new to you, without writing any loops.
+!!! INFO
+    For this section, feel free to share and discuss your code in public (like in a Piazza post).
+
+Do the following PyTorch practices, without writing any loops. This is optional but recommended, especially if you're not familar with PyTorch.
 
 - Create this `(3, 3)` tensor. (1 line except for printing)
   ```python
@@ -201,6 +194,7 @@ Do the following practices if PyTorch is new to you, without writing any loops.
   V = tensor([[0.3869, 0.3227, 0.7142], ...])
   Y = tensor([[0.2222, 0.9122, 0.5728], ...])
   ```
+- Create a random `(10, 3)` tensor, and think of it as a batch of ten 3D vectors. Compute the norm of the vectors, so that you get a `(10, )` tensor. (1 line)
 
 ## Aris design and concepts
 
