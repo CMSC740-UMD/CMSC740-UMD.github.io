@@ -26,24 +26,13 @@ In principle, you're free to setup or reuse any environment, as long as you can 
 
 Within the Python environment, install the following packages:
 
+
 - [PyTorch](https://pytorch.org/get-started/locally/)
   - *GPU is not necessary.*
   - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code faster.
   - Later in the semester, you'll get access to a cluster with GPUs available. Details to be announced.
-- OpenEXR (native library)
-  - Conda users (_except_ Mac users), install [openexr](https://anaconda.org/conda-forge/openexr) via Conda
-  - Mac users (Conda or not), install with [Homebrew](https://formulae.brew.sh/formula/openexr)
-  - Linux non-Conda users, install `libopenexr-dev`
-- OpenEXR (Python binding)
-  - Windows users, use Conda to install [openexr-python](https://anaconda.org/conda-forge/openexr-python)
-  - Mac users, run these commands, even if you're using Conda:
-    ```bash
-    export CPPFLAGS="-I/opt/homebrew/include/OpenEXR -I/opt/homebrew/include/Imath"
-    export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/lib/OpenEXR"
-    pip install OpenEXR
-    ```
-    - Note: this assumes that your Homebrew is in the default location. Modify the paths as needed.
-  - Linux users, use `pip install OpenEXR` (preferred; no exports needed) or Conda
+- OpenEXR
+  - See the instructions below, under the "Installing OpenEXR" section
 - Install these with `pip install`, even if you're using Conda
   - One-liner command: `pip install hydra-core pillow opencv-python open3d tqdm plotly`
   - [hydra-core](https://pypi.org/project/hydra-core/)
@@ -53,7 +42,6 @@ Within the Python environment, install the following packages:
   - [tqdm](https://pypi.org/project/tqdm/)
   - [plotly](https://pypi.org/project/plotly/)
 - Mac users, install `libomp` with [Homebrew](https://formulae.brew.sh/formula/libomp)
-
 - Run the following commands:
   ```bash
   pip uninstall ipywidgets
@@ -66,6 +54,36 @@ To check your installations, try the following and make sure there isn't any `Im
 $ python
 >>> import torch, OpenEXR, cv2, tqdm, open3d, hydra, plotly
 ```
+
+## Installing OpenEXR
+
+For OpenEXR you need to install two packages: a native library and a Python binding. Most users can install both using Conda:
+
+```
+conda install -c conda-forge openexr
+conda install -c conda-forge openexr-python
+```
+
+### Arm-based Mac
+
+If the above instructions does not work, try removing them from your Conda environment and follow these instructions:
+
+1. Install the `openexr` with [Homebrew](https://formulae.brew.sh/formula/openexr)
+1. Install the Python binding with `pip`:
+    ```bash
+    export CPPFLAGS="-I/opt/homebrew/include/OpenEXR -I/opt/homebrew/include/Imath"
+    export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/lib/OpenEXR"
+    pip install OpenEXR
+    ```
+
+Note: this assumes that your Homebrew is in the default location. Modify the paths as needed.
+
+### Linux
+
+If you're using Linux and Conda does not work for you:
+
+1. Install `libopenexr-dev` from the package manager (`apt`, `yum`, etc.)
+2. Run `pip install OpenEXR`
 
 ## Clone the code
 
