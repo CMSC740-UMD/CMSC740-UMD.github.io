@@ -110,6 +110,10 @@ Complete the `beckmann` functions for 3D samples on the upper half of a unit sph
 p(\theta, \phi)=\frac{1}{2\pi}\cdot\frac{2e^{-\tan^2(\theta)/\alpha^2}}{\alpha^2\cos^3(\theta)}
 \end{equation*}
 
+Note that the above function is symmetric around the north pole, and is separable into the azimuth and polar angle parts $p(\phi)$, $p(\theta)$. In particular, $p(\phi)=\frac{1}{2\pi}$. You should compute the inverse CDF of $p(\phi)$ and $p(\theta)$ to find the correct mapping.
+
+Also, the equation is given in solid angles, so that $\int p(\theta,\phi)\text{d}\omega=\int p(\theta,\phi)\sin\theta\text{d}\theta\text{d}\phi=1$.
+
 Here, $\alpha$ is a parameter that controls the "smoothness" of the distribution, as shown below:
 
 ![Different alphas, from Nori](images/a2/beckmann.png  height="200px")
