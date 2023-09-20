@@ -5,9 +5,6 @@
 
 _Advanced Computer Graphics (CMSC740), Fall 2023_
 
-!!! WARNING
-    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
-
 In this assignment you'll implement:
 
 1. Area lights, a realistic type of light source that is associated with a mesh in the scene
@@ -15,13 +12,32 @@ In this assignment you'll implement:
 1. Dielectrics material for mirror reflection and refraction
 1. Whitted-style ray tracing
 
-As before, pull the latest code before you start working.
+## Update Your Code
+
+**Before you start**, fetch the latest changes from the [Git repository](https://github.com/CMSC740-UMD/aris-renderer-student), and merge them into your working branch.
+
+Alternatively, you can browse our repository and copy the following files to your own repository:
+
+```
+aris/integrator/whitted.py
+aris/integrator/emitter_check.py
+config/integrator/emitter_check.yaml
+```
+
+## Useful APIs
+
+Here we list some APIs you may find helpful when coding the assignments.
+
+- `Scene.sample_brdf` and `Scene.eval_brdf` handle BRDF calls of multiple rays for you.
+- `aris.utils.tensor_utils.dot` computes dot product between tensors.
+- `torch.nn.functional.normalize` normalizes tensors.
+- `torch.linalg.vector_norm` computes norms.
 
 # 1. Area Light (25pts)
 
 In Aris, we represent geometry with triangle meshes. When you cast a ray with `ray_intersect`, the returned `GeometryOutput` object has a `brdf_i` tensor. `brdf_i` stores the indices of the triangle meshes hit by the rays. For example, if the scene has 10 meshes, and the first ray hits the 3rd mesh, `brdf_i[0] == 2`.
 
-To model an area light, we associate it with one of the meshes. In this model, each triangle of the mesh uniformly emits radiance towards all directions above its surface. Take a look at the `emitter/area.py` file. In the contructor of the `AreaLight` class, you can find the following arguments:
+To model an area light, we associate it with one of the meshes. In this model, each triangle of the mesh uniformly emits radiance towards all directions in front of its surface (i.e. towards the hemisphere defined by the surface normal). Take a look at the `emitter/area.py` file. In the contructor of the `AreaLight` class, you can find the following arguments:
 
 - `radiance`, the radiance emitted by the triangles
 - `geometry`, the geometry representation of the scene
@@ -36,12 +52,27 @@ Your task for this part is to complete these three functions for area lights, wh
 - `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance. This function is only used by `sample` now but will become more useful in future assignments.
 - `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set (see the comments of the `EmitterQuery` class for what these tensors are), compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit.
 
-  The `geometry` input is optional, and the `le` function should check whether `points` and `targets` are mutually visible when `geometry` is not `None`. The idea is that if the emitter points are sampled, it will be necessary to check visibility. However, if the points are already ray-traced (a ray bounced from an object and hit the emitter), the check won't be needed.
+  The `geometry` input is optional, and **the `le` function should check whether `points` and `targets` are mutually visible when `geometry` is not `None`**. The idea is that if the emitter points are sampled, it will be necessary to check visibility. However, if the points are already ray-traced (a ray bounced from an object and hit the emitter), the check won't be needed and `geometry` will be set to `None`.
 
 Hints:
 
-- Take a look at the uniform sampling functions already provided in the Geometry class.
+- Take a look at the uniform sampling functions already provided in the Geometry class. The `Geometry.uniform_sample` and `Geometry.uniform_sample_pos_pdf` (implemented in the `Mesh` class if you're interested) sample uniformly from a primitive and calculate the pdfs. Your area light `sample` and `pos_pdf` should simply call these functions and convert the results.
 - When you use the emitters later, remember to set all the required fields in `EmitterQuery`.
+
+## Verifying
+
+We provide an `emitter_check` integrator for checking if your area light implementation is correct.
+
+```bash
+python render.py scene=cbox scene/brdf=cbox_diffuse spp=256 integrator=emitter_check
+```
+
+![cbox Emitter Checking](images/a3/cbox-emitter.png)
+
+Your rendering should look like the example, but you don't need to include this rendering in the report. Common issues in `le`:
+
+- Missing shadows: you should check whether `points` and `targets` are mutually visible
+- Bright ceiling: your should make sure that the area light only emits to the front (use surface normal)
 
 # 2. Distribution Ray Tracing (40pts)
 
@@ -86,7 +117,7 @@ $\newcommand{\nn}{{\textbf n}}$
 G(\xx,\yy):=V(\xx,\yy)\frac{|\nn_{\xx}\cdot (\xx \to \yy)|\cdot|\nn_{\yy}\cdot (\yy \to \xx)|}{||\xx-\yy||^{2}}
 \end{align}
 
-$\nn_{\xx}$ and $\nn_{\yy}$ are the surface normals at $\xx$ and $\yy$, respectively. $V$ is the visibility function.
+$\nn_{\xx}$ and $\nn_{\yy}$ are the surface normals at $\xx$ and $\yy$, respectively. $V$ is the visibility function, which is taken care of by the area light `le` function.
 
 Now, implement distribution ray tracing in `aris/integrator/whitted.py`. You'll find a loop that breaks immediately: don't worry about the loop, just complete the one block you're asked to. You can leave those "Whitted" parts untouched for now; they're for the last part of this assignment.
 
@@ -114,14 +145,19 @@ Evaluating a BRDF function is done in the same spirit. These functions are provi
 
 ## How does Emitters work?
 
-You can follow the above idea and figure out how to:
+Follow the above idea for BRDF and figure out how to:
 
 - Process the rays that hit emitters
 - Sample emitters
 
-This means that you'll need to write loops in your integrator.
+You can find an example in the `emitter_check` integrator. It is very similar to Distribution Ray Tracing, except that:
 
-## Reminder: you're not required to do it this way
+1. It does not handle rays that hit emitters ($L_{e}$ is zero)
+1. For $L_{r}$, it replaces the geometry term with $V(\xx,\yy)/{||\xx-\yy||^{2}}$
+
+Nonetheless, it can be a useful reference.
+
+## Note: you're not required to do it this way
 
 The above scheme of BRDF and Emitter sampling / evaluating is the best we came up with, so we share the ideas and skeleton code with you to help you with _one possible solution_. Feel free to do it in other (correct) ways, and we look forward to learning about more efficient apporaches from you!
 
@@ -150,6 +186,7 @@ Hints:
 - Remember to check if the rays are from inside or outside, and swap `ext_ior` and `int_ior` accordingly.
 - Remember to handle total internal reflections.
 - You may want to make Fresnel term computation an individual function (for future assignments).
+- You can also complete the next section (Whitted-style ray tracing) first, for example by making `dielectric` a mirror while debugging Whitted.
 
 # 4. Whitted-sytle Ray Tracing (10pts)
 
@@ -175,15 +212,7 @@ python render.py scene=cbox scene/brdf=cbox spp=512 integrator=whitted
 
 Note: the extension does not change how diffuse surfaces are handled. Therefore, you will still produce the same result for part 2 (`cbox_diffuse`) after implementing this.
 
-![cbox Distribution Ray Tracing](images/a3/cbox-whitted.png)
-
-# Appendix. Useful APIs
-
-Here we list some APIs you may find helpful when coding the assignments.
-
-- `Geometry.uniform_sample` and `Geometry.uniform_sample_pos_pdf` (implemented in the `Mesh` class if you're interested) helps you sample uniformly from a primitive and calculate the pdfs. Your area light `sample` and `pos_pdf` can simply call these functions and convert the results.
-- `Scene.sample_brdf` and `Scene.eval_brdf` handle BRDF calls of multiple rays for you.
-- `aris.utils.tensor_utils.dot` computes dot product between tensors.
+![cbox Whitted-style Ray Tracing](images/a3/cbox-whitted.png)
 
 <style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
 <!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
