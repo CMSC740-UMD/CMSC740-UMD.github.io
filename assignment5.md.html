@@ -5,8 +5,16 @@
 
 _Advanced Computer Graphics (CMSC740), Fall 2023_
 
-!!! WARNING
-    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
+## Update Your Code
+
+**Before you start**, fetch the latest changes from the [Git repository](https://github.com/CMSC740-UMD/aris-renderer-student), and merge them into your working branch.
+
+Alternatively, you can browse our repository and copy the following files to your own repository:
+
+```
+aris/utils/image_utils.py
+reports/assignment-5/report.md.html
+```
 
 In this assignment, you'll explore inverse rendering with two different, physics-based rendering approaches: differentiable [path tracing](https://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Path_Tracing) and differentiable [neural radiosity](https://arxiv.org/abs/2105.12319). You will perform "toy experiments" where you will recover the diffuse BRDF parameters of some scene elements based on a given ground truth image of the scene.
 
@@ -14,14 +22,10 @@ In this assignment, you'll explore inverse rendering with two different, physics
     The skeleton code repository has been updated to include necessary code for this assignment. Remember to pull and merge `origin/master` to your own branch.
 
 !!! NOTE
-    We'll provide a reference path tracer implementation to assist you with this assignment, which also include some skeleton code for neural radiosity.
-    As before, you need to submit Assignment 4 before you can be granted access.
+    We'll provide a reference path tracer implementation to assist you with this assignment, which also include some skeleton code for neural radiosity. Check our Piazza note.
 
 !!! NOTE
-    Although we introduce scene parameter optimization in Part 1, 2 and network training in Part 3, the number of parameters being optimized is small. Therefore, it should work well and take a reasonable amount of time to run all the experiments on the CPU. You still have the option to use our [GPU cluster](cluster.md.html) if it runs too slow on your computer.
-
-!!! WARNING
-    Update **10/31**: check [this Piazza note](https://piazza.com/class/l77sgv2ummd60t/post/290) to fix a bug in the skeleton code.
+    Although we introduce scene parameter optimization in Part 1, 2 and network training in Part 3, the number of parameters being optimized is small. Therefore, it should work well and take a reasonable amount of time to run all the experiments on the CPU.
 
 # 1. Inverse Rendering (30pts)
 
@@ -119,7 +123,7 @@ Now, take a look at `config/scene/brdf/cbox_train_diffuse.yaml`. The materials o
 !!! NOTE
     In the rest of this assignment, feel free to modify train.py and other provided code to fit your needs. Make sure you document the important changes in your report.
 
-You can now run the following command to try optimizing the color of the walls such that the rendered image matches with the ground truth. By default, training runs for 4,000 gradient descent steps, and a full image is rendered every 1,000 steps to show the progress. **Windows users: replace \ by `**
+You can now run the following command to try optimizing the color of the walls such that the rendered image matches with the ground truth. By default, training runs for 4,000 gradient descent steps, and a full image is rendered every 1,000 steps to show the progress. **Windows users: type the command in one line, or replace \ by `**
 
 ```bash
 python train.py --config-name train_render \
@@ -227,18 +231,13 @@ python train.py --config-name train_nerad \
     gt=./scripts/cbox-diffuse.exr
 ```
 
-Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Include them in your report after you complete the next part (correct RHS).
-
-!!! WARNING
-    In the provided report template, there is a question that ask you to include lhs and rhs from this part. Since you’ll no longer be able to render these images after completing the next part (correct RHS), you don’t have to answer the question. Feel free to skip it and only include images after you have implemented the correct RHS.
+Your code should run fine, and when you check the `visualization` folder you'll see `lhs.png` and `rhs.png` in each folder. Take a look at the images to make sure that everything is working fine. You don't need to include them for this part, as the implementation is incomlete.
 
 You will notice that in the provided code, `RHS` is set to be the result of ordinary path tracing. This is just a placeholder to make sure that you can run training and get some reasonable results, but it's not how neural radiosity works. In fact, the results will be closer to Part 2. You will implement the actual RHS computation for neural radiosity in the next part.
 
 ## Running Neural Radiosity (25pts)
 
-
-Remove the placeholder `RHS` computation and implement your own, using the actual neural radiosity approach. Launch training with the same command as before. Your training should be faster and more effective.
-
+Remove the placeholder `RHS` computation and implement your own, using the actual neural radiosity approach. Launch training with the same command as before. Your training should be faster and more effective. Include the `lhs.png` and `rhs.png` files in your report.
 
 ## Rendering Neural Radiosity (10pts)
 
