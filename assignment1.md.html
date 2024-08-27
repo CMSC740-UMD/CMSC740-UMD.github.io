@@ -3,7 +3,7 @@
 
 **Assignment 1**
 
-_Advanced Computer Graphics (CMSC740), Fall 2023_
+_Advanced Computer Graphics (CMSC740), Fall 2024_
 
 In the first assignment you'll:
 
@@ -24,13 +24,11 @@ Aris requires `Python 3.10`. You can get it in different ways, but the recommend
 Students who *already have their favorite Python environment managers* can continue to use those.
 In principle, you're free to setup or reuse any environment, as long as you can install all the required packages and work on the assignments. However, we can only help with Conda setups.
 
-Within the Python environment, install the following packages:
-
+Within the Python environment, install the following packages in order:
 
 - [PyTorch](https://pytorch.org/get-started/locally/)
   - *GPU is not necessary.*
   - For assignment 1~4, CPU rendering is reasonably fast, and GPU is unlikely to make your code faster.
-  - Later in the semester, you'll get access to a cluster with GPUs available. Details to be announced.
 - OpenEXR
   - See the instructions below, under the "Installing OpenEXR" section
 - Install these with `pip install`, even if you're using Conda
@@ -256,7 +254,7 @@ You can view the exr files with [tev](https://github.com/Tom94/tev). Zoom in to 
 
 _Above: examples of the cbox scene rendered with whitted style tracer (left) and path tracer (right). You'll implement the integrators in assignment 3 and 4._
 
-The perspective camera Aris has is an idea pinhole camera. In this exercise, you'll extend it to produce depth-of-field effects, as shown above.
+The perspective camera Aris has is an ideal pinhole camera. In this exercise, you'll extend it to produce depth-of-field effects, as shown above.
 
 The theory can be found in [this section of the PBR book](https://www.pbr-book.org/3ed-2018/Camera_Models/Projective_Camera_Models#TheThinLensModelandDepthofField).
 
