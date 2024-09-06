@@ -5,9 +5,6 @@
 
 _Advanced Computer Graphics (CMSC740), Fall 2024_
 
-!!! WARNING
-    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
-
 In the second assignment you'll:
 
 - Write functions that sample from different distributions
@@ -196,7 +193,7 @@ Here, $H$ is the upper hemisphere centered at $\xx$; "up" here means the directi
 Pay attention to $\frac{\cos\theta}{\pi}$, meaning that the samples have cosine weights on the hemisphere, which you have implemented in Part 1. However, your samples are in a coordinate system where the "up" direction is $(0,0,1)$. Therefore, you need to transform them to the coordinate system at $\xx$ defined by its normal. You can use `LocalFrames` in `aris.utils.coords_utils` to do the conversion.
 
 !!! NOTE
-    Reminder: every ray only evaluates one sample on the hemisphere. The integral is approximated by shooting many rays.
+    Reminder: every ray only evaluates one sample on the hemisphere. The integral is approximated by shooting many rays per pixel (implemented in `render.py`).
 
 !!! NOTE
     Reduce spp and / or resolution to accelerate debugging
