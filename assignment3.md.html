@@ -193,8 +193,7 @@ L_{i}(\cc, \omega_{c})=\begin{cases} \frac{1}{p}cL_{i}(\xx, \omega_{r}), &\text{
 Here $p$ is the probability to continue tracing (`self.cont_prob`), and $\xi$ is a random sample for each ray that decides whether to trace that ray. While this function is recursive, we implement it as a loop for better efficiency and easier debugging.
 
 !!! INFO
-
-Once a ray is determined to be terminated (hit diffuse surface, or via Russian-roulette), it's recommended that you remove it from future rounds of ray casting. Otherwise, your code may take much longer than needed to render.
+    Once a ray is determined to be terminated (hit diffuse surface, or via Russian-roulette), it's recommended that you remove it from future rounds of ray casting. Otherwise, your code may take much longer than needed to render.
 
 Render with this command:
 
