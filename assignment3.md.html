@@ -5,27 +5,12 @@
 
 _Advanced Computer Graphics (CMSC740), Fall 2024_
 
-!!! WARNING
-    This page is a draft. It's content is subject to change without notification until it's officially released. Feel free to have a preview but don't start working on it yet.
-
 In this assignment you'll implement:
 
 1. Area lights, a realistic type of light source that is associated with a mesh in the scene
 1. Distribution ray tracing
 1. Dielectrics material for mirror reflection and refraction
 1. Whitted-style ray tracing
-
-## Update Your Code
-
-**Before you start**, fetch the latest changes from the [Git repository](https://github.com/CMSC740-UMD/aris-renderer-student), and merge them into your working branch.
-
-Alternatively, you can browse our repository and copy the following files to your own repository:
-
-```
-aris/integrator/whitted.py
-aris/integrator/emitter_check.py
-config/integrator/emitter_check.yaml
-```
 
 ## Useful APIs
 
@@ -206,6 +191,10 @@ L_{i}(\cc, \omega_{c})=\begin{cases} \frac{1}{p}cL_{i}(\xx, \omega_{r}), &\text{
 \end{align}
 
 Here $p$ is the probability to continue tracing (`self.cont_prob`), and $\xi$ is a random sample for each ray that decides whether to trace that ray. While this function is recursive, we implement it as a loop for better efficiency and easier debugging.
+
+!!! INFO
+
+Once a ray is determined to be terminated (hit diffuse surface, or via Russian-roulette), it's recommended that you remove it from future rounds of ray casting. Otherwise, your code may take much longer than needed to render.
 
 Render with this command:
 
