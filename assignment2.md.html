@@ -53,7 +53,7 @@ Render the Ajax scene with the following command:
 python render.py scene=ajax_simple integrator=point_ajax
 ```
 
-# 2. Distribution Transformation (total of 50pts)
+# 2. Distribution Transformation (total of 50 pts)
 
 In rendering, we often need random samples from various non-uniform probability distributions over different domains, such as squares, circles, spheres, or hemispheres etc. However, built-in functions in most systems and libraries only generate samples from uniform or normal distributions, and over (n-dimensional) cubes. Therefore, we have to transform samples from the given distributions (typically a uniform distribution over a 2D square, in our case) to the desired ones (non-uniform distribution over a desired domain such as a circle or sphere).
 
@@ -181,7 +181,7 @@ You'll include screenshots of the plots for your implementation in the report. T
 
 And your code should pass the checks as well.
 
-# 3. Area Light (25pts)
+# 3. Area Light (25 pts)
 
 In Aris, we represent geometry with triangle meshes. When you cast a ray with `ray_intersect`, the returned `GeometryOutput` object has a `brdf_i` tensor. `brdf_i` stores the indices of the triangle meshes hit by the rays. For example, if the scene has 10 meshes, and the first ray hits the 3rd mesh, `brdf_i[0] == 2`.
 
