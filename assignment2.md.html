@@ -3,142 +3,18 @@
 
 **Assignment 2**
 
-_Advanced Computer Graphics (CMSC740), Fall 2024_
+_Advanced Computer Graphics (CMSC740), Fall 2025_
 
 In the second assignment you'll:
 
+- Implement a simple rendering algorithm with a point light source
+
 - Write functions that sample from different distributions
-- Implement two simple rendering algorithms
 
-# 1. Distribution Transformation
+- Add functionality necessary for area light sources, which will be used in the next assignment in more advanced rendering algorithms
 
-In rendering, we often need random samples from various non-uniform probability distributions over different domains, such as squares, circles, spheres, or hemispheres etc. However, built-in functions in most systems and libraries only generate samples from uniform or normal distributions, and over (n-dimensional) cubes. Therefore, we have to transform samples from the given distributions (typically a uniform distribution over a 2D square, in our case) to the desired ones (non-uniform distribution over a desired domain such as a circle or sphere).
 
-For example, in Assignment 1, you used `torch.rand` to generate uniformly distributed points on the square from $[0, 0]$ to $[1, 1]$. You then transformed them to a uniform distribution on a larger square from $[-1, -1]$ to $[1, 1]$. For this assignment, you will complete functions that tranform uniformly distributed points on the unit square square (from `torch.rand`) to a variety of other distributions and domains.
-
-**Getting Started**
-
-Open `aris/utils/sampling_utils.py`. You'll see a few `sample_*` functions and `pdf_*` functions.
-
-- A `sample_distribution` function has one argument `uv`, which is an `(N, 2)` tensor containing $N$ 2D uniformly random samples in the $[0, 1]$ square. You can also view each 2D sample as two 1D samples ($u,v$). The function should return a `(N, D)` tensor of samples in the desired distribution and over the desired domain. $D$ is either 2 or 3.
-
-- A `pdf_distribution` function takes in an `(N, D)` tensor of $N$ samples, and returns a `(N,)` tensor with the PDF (probability density function) values of each sample in that distribution. You do not need to check if the samples are actually inside the distribution (just assume that they are).
-
-See the `uniform_square` example provided to you. It transforms the $[0, 1]$ square to the $[-1, 1]$ square, and every point in the square has PDF $p=0.25$ (this is because the integral of the PDF over the domain needs to be $1$, and the area of the $[-1, 1]$ square is $4$).
-
-**Visualization**
-
-Open `test_warp.ipynb` in VSCode. Run the first and second cells. You'll see an UI like this:
-
-![Warping UI](images/a2/warping_ui.png)
-
-This is a visualization of the points transformed by the `sample_uniform_square` function. The 2D samples are put on the $z=0$ plane. You can rotate the view with your mouse.
-
-Later, when you have implmented other functions, you can click on the "uniform_square" dropdown and select a different distribution to verify your code (see examples below).
-
-**Verification**
-
-Run the third cell. You'll see a passing test followed by an error:
-
-![Warping Test](images/a2/warping_test.png  height="120px")
-
-This cell tests all sampling and PDF functions by checking if the density of the sampled points from the `sample_` functions match the returned values from the corresponding `pdf_` functions. It throws an error right now because those functions have not been implemented.
-
-!!! NOTE
-    While reading the sections below, also take a look at the report template for Assignment 2 which has more specific requirements.
-
-## 1.1 Tent
-
-Complete the `tent` functions for 2D samples in this distribution (the domain here is again the $[-1, 1]$ square, but the PDF is non-uniform):
-
-\begin{equation*}
-p(x,y)=p_1(x)p_1(y) \text{ where } p_1(t)=\begin{cases}1-|t|, &-1\le t\le 1 \\ 0, &\text{otherwise}\end{cases}
-\end{equation*}
-
-**Hints**
-
-For sampling $p_1(t)$ follow these steps:
-
-1. Compute the CDF (cumulative distribution function) $P_1(t)$
-1. Derive the inverse $P^{-1}_1(t)$
-1. Map the uniform sample with the inverse
-
-You'll be asked to show your steps in the report (see report template for details).
-
-## 1.2 Uniform Disk
-
-Complete the `uniform_disk` functions for 2D samples uniformly distributed on a unit disk. The disk is centered at the origin and has radius 1.
-
-## 1.3 Uniform Sphere
-
-Complete the `uniform_sphere` functions for 3D samples uniformly distributed on a unit sphere. The sphere is centered at the origin and has radius 1.
-
-For this and the following exercises, we use the spherical coordinates $(\theta, \phi)$ for describing PDFs and follow this convention of representation in the cartesian coordinates:
-
-\begin{align*}
-x &= \sin \theta \cos \phi \\
-y &= \sin \theta \sin \phi \\
-z &= \cos \theta
-\end{align*}
-
-Note that the output of your `sample_` functions and the inputs to your `pdf_` functions are 3D samples in cartesian coordinates.
-
-**Hints**
-
-The distribution in spherical coordinate representation is separable. Therefore, sampling of $\theta$ and $\phi$ from the two samples $u,v$ can be split into two steps:
-
-1. Map $u$ to $\theta$
-1. Map $v$ to $\phi$
-
-## 1.4 Uniform Hemishpere
-
-Complete the `uniform_hemisphere` functions for 3D samples uniformly distributed on the upper half of a unit sphere. The sphere is centered at the origin and has radius 1. Here, "up" means the direction of $(0, 0, 1)$, so upper half means $z\ge 0$.
-
-## 1.5 Cosine Hemisphere
-
-Complete the `cosine_hemisphere` functions for 3D samples on the upper half of a unit sphere with this density function:
-
-\begin{equation*}
-p(\theta, \phi)=\frac{\cos(\theta)}{\pi}
-\end{equation*}
-
-## 1.6 Beckmann
-
-Complete the `beckmann` functions for 3D samples on the upper half of a unit sphere with this density function (we will later use this distribution to model glossy surfaces):
-
-\begin{equation*}
-p(\theta, \phi)=\frac{1}{2\pi}\cdot\frac{2e^{-\tan^2(\theta)/\alpha^2}}{\alpha^2\cos^3(\theta)}
-\end{equation*}
-
-Note that the above function is symmetric around the north pole, and is separable into the azimuth and polar angle parts $p(\phi)$, $p(\theta)$. In particular, $p(\phi)=\frac{1}{2\pi}$. You should compute the inverse CDF of $p(\phi)$ and $p(\theta)$ to find the correct mapping.
-
-Also, the equation is given in solid angles, so that $\int p(\theta,\phi)\text{d}\omega=\int p(\theta,\phi)\sin\theta\text{d}\theta\text{d}\phi=1$.
-
-Here, $\alpha$ is a parameter that controls the "smoothness" of the distribution, as shown below:
-
-![Different alphas, from Nori](images/a2/beckmann.png  height="200px")
-
-**Hints**
-
-You may find these substitutions and identities useful:
-
-\begin{align*}
-x &= \cos\theta \\
-\tan^{2}\theta &= \frac{1-x^{2}}{x^{2}} \\
-\int f'(x)e^{f(x)}\text{d}x &= e^{f(x)}+C
-\end{align*}
-
-## Example output
-
-You'll include screenshots of the plots for your implementation in the report. They should look like these (click to view larger):
-
-![Tent](images/a2/vis-tent.png height="240px") ![Uniform Disk](images/a2/vis-uniform-disk.png height="240px") ![Uniform Sphere](images/a2/vis-uniform-sphere.png height="240px") ![Uniform Hemisphere](images/a2/vis-uniform-hemisphere.png height="240px")
-
-![Cosine Hemisphere](images/a2/vis-cosine-hemisphere.png height="240px") ![Beckmann $\alpha=0.1$](images/a2/vis-beckmann-0.1.png height="240px") ![Beckmann $\alpha=0.5$](images/a2/vis-beckmann-0.5.png height="240px") ![Beckmann $\alpha=0.9$](images/a2/vis-beckmann-0.9.png height="240px")
-
-And your code should pass the checks as well.
-
-# 2. Point Light Integrator
+# 1. Point Light Integrator (25pts)
 
 ![](images/a2/ajax-point.png height="400px")
 
@@ -176,33 +52,175 @@ Render the Ajax scene with the following command:
 python render.py scene=ajax_simple integrator=point_ajax
 ```
 
-# 3. Ambient Occlusion Integrator
+# 2. Distribution Transformation (total of 50pts)
 
-![](images/a2/ajax-ao.png height="400px")
+In rendering, we often need random samples from various non-uniform probability distributions over different domains, such as squares, circles, spheres, or hemispheres etc. However, built-in functions in most systems and libraries only generate samples from uniform or normal distributions, and over (n-dimensional) cubes. Therefore, we have to transform samples from the given distributions (typically a uniform distribution over a 2D square, in our case) to the desired ones (non-uniform distribution over a desired domain such as a circle or sphere).
 
-Complete the ambient occlusion integrator in `aris/integrator/ao.py`.
+For example, in Assignment 1, you used `torch.rand` to generate uniformly distributed points on the square from $[0, 0]$ to $[1, 1]$. You then transformed them to a uniform distribution on a larger square from $[-1, -1]$ to $[1, 1]$. For this assignment, you will complete functions that tranform uniformly distributed points on the unit square square (from `torch.rand`) to a variety of other distributions and domains.
 
-In ambient occlusion rendering, imagine a diffuse object is placed inside a sphere with uniformly bright light coming from every direction. The brightness of a surface point is solely determined by how much of the sphere is visible to the point. Formally, the formula is:
+**Getting Started**
+
+Open `aris/utils/sampling_utils.py`. You'll see a few `sample_*` functions and `pdf_*` functions.
+
+- A `sample_distribution` function has one argument `uv`, which is an `(N, 2)` tensor containing $N$ 2D uniformly random samples in the $[0, 1]$ square. You can also view each 2D sample as two 1D samples ($u,v$). The function should return a `(N, D)` tensor of samples in the desired distribution and over the desired domain. $D$ is either 2 or 3.
+
+- A `pdf_distribution` function takes in an `(N, D)` tensor of $N$ samples, and returns a `(N,)` tensor with the PDF (probability density function) values of each sample in that distribution. You do not need to check if the samples are actually inside the distribution (just assume that they are).
+
+See the `uniform_square` example provided to you. It transforms the $[0, 1]$ square to the $[-1, 1]$ square, and every point in the square has PDF $p=0.25$ (this is because the integral of the PDF over the domain needs to be $1$, and the area of the $[-1, 1]$ square is $4$).
+
+**Visualization**
+
+Open `test_warp.ipynb` in VSCode. Run the first and second cells. You'll see an UI like this:
+
+![Warping UI](images/a2/warping_ui.png)
+
+This is a visualization of the points transformed by the `sample_uniform_square` function. The 2D samples are put on the $z=0$ plane. You can rotate the view with your mouse.
+
+Later, when you have implmented other functions, you can click on the "uniform_square" dropdown and select a different distribution to verify your code (see examples below).
+
+**Verification**
+
+Run the third cell. You'll see a passing test followed by an error:
+
+![Warping Test](images/a2/warping_test.png  height="120px")
+
+This cell tests all sampling and PDF functions by checking if the density of the sampled points from the `sample_` functions match the returned values from the corresponding `pdf_` functions. It throws an error right now because those functions have not been implemented.
+
+!!! NOTE
+    While reading the sections below, also take a look at the report template for Assignment 2 which has more specific requirements.
+
+## 1.1 Tent (8 pts)
+
+Complete the `tent` functions for 2D samples in this distribution (the domain here is again the $[-1, 1]$ square, but the PDF is non-uniform):
+
+\begin{equation*}
+p(x,y)=p_1(x)p_1(y) \text{ where } p_1(t)=\begin{cases}1-|t|, &-1\le t\le 1 \\ 0, &\text{otherwise}\end{cases}
+\end{equation*}
+
+**Hints**
+
+For sampling $p_1(t)$ follow these steps:
+
+1. Compute the CDF (cumulative distribution function) $P_1(t)$
+1. Derive the inverse $P^{-1}_1(t)$
+1. Map the uniform sample with the inverse
+
+You'll be asked to show your steps in the report (see report template for details).
+
+## 1.2 Uniform Disk (8 pts)
+
+Complete the `uniform_disk` functions for 2D samples uniformly distributed on a unit disk. The disk is centered at the origin and has radius 1.
+
+## 1.3 Uniform Sphere (8 pts)
+
+Complete the `uniform_sphere` functions for 3D samples uniformly distributed on a unit sphere. The sphere is centered at the origin and has radius 1.
+
+For this and the following exercises, we use the spherical coordinates $(\theta, \phi)$ for describing PDFs and follow this convention of representation in the cartesian coordinates:
 
 \begin{align*}
-L(\xx) = \int_{H^{2}(\xx)} V(\xx, \xx + \alpha\omega_i)\frac{\cos\theta}{\pi}\text{d}\omega_i
+x &= \sin \theta \cos \phi \\
+y &= \sin \theta \sin \phi \\
+z &= \cos \theta
 \end{align*}
 
-Here, $H$ is the upper hemisphere centered at $\xx$; "up" here means the direction of the surface normal at $\xx$. $\theta$ is the angle between $\omega_i$ and the normal. $\alpha$ controls how far the occlusion effect is, and for this assignment you can assume $\alpha=\infty$.
+Note that the output of your `sample_` functions and the inputs to your `pdf_` functions are 3D samples in cartesian coordinates.
 
-Pay attention to $\frac{\cos\theta}{\pi}$, meaning that the samples have cosine weights on the hemisphere, which you have implemented in Part 1. However, your samples are in a coordinate system where the "up" direction is $(0,0,1)$. Therefore, you need to transform them to the coordinate system at $\xx$ defined by its normal. You can use `LocalFrames` in `aris.utils.coords_utils` to do the conversion.
+**Hints**
 
-!!! NOTE
-    Reminder: every ray only evaluates one sample on the hemisphere. The integral is approximated by shooting many rays per pixel (implemented in `render.py`).
+The distribution in spherical coordinate representation is separable. Therefore, sampling of $\theta$ and $\phi$ from the two samples $u,v$ can be split into two steps:
 
-!!! NOTE
-    Reduce spp and / or resolution to accelerate debugging
+1. Map $u$ to $\theta$
+1. Map $v$ to $\phi$
 
-Render the Ajax scene with the following command:
+## 1.4 Uniform Hemishpere (8 pts)
 
+Complete the `uniform_hemisphere` functions for 3D samples uniformly distributed on the upper half of a unit sphere. The sphere is centered at the origin and has radius 1. Here, "up" means the direction of $(0, 0, 1)$, so upper half means $z\ge 0$.
+
+## 1.5 Cosine Hemisphere (8 pts)
+
+Complete the `cosine_hemisphere` functions for 3D samples on the upper half of a unit sphere with this density function:
+
+\begin{equation*}
+p(\theta, \phi)=\frac{\cos(\theta)}{\pi}
+\end{equation*}
+
+## 1.6 Beckmann (10 pts)
+
+Complete the `beckmann` functions for 3D samples on the upper half of a unit sphere with this density function (we will later use this distribution to model glossy surfaces):
+
+\begin{equation*}
+p(\theta, \phi)=\frac{1}{2\pi}\cdot\frac{2e^{-\tan^2(\theta)/\alpha^2}}{\alpha^2\cos^3(\theta)}
+\end{equation*}
+
+Note that the above function is symmetric around the north pole, and is separable into the azimuth and polar angle parts $p(\phi)$, $p(\theta)$. In particular, $p(\phi)=\frac{1}{2\pi}$. You should compute the inverse CDF of $p(\phi)$ and $p(\theta)$ to find the correct mapping.
+
+Also, the equation is given in solid angles, so that $\int p(\theta,\phi)\text{d}\omega=\int p(\theta,\phi)\sin\theta\text{d}\theta\text{d}\phi=1$.
+
+Here, $\alpha$ is a parameter that controls the "smoothness" of the distribution, as shown below:
+
+![Different alphas, from Nori](images/a2/beckmann.png  height="200px")
+
+**Hints**
+
+You may find these substitutions and identities useful:
+
+\begin{align*}
+x &= \cos\theta \\
+\tan^{2}\theta &= \frac{1-x^{2}}{x^{2}} \\
+\int f'(x)e^{f(x)}\text{d}x &= e^{f(x)}+C
+\end{align*}
+
+## Example output
+
+You'll include screenshots of the plots for your implementation in the report. They should look like these (click to view larger):
+
+![Tent](images/a2/vis-tent.png height="240px") ![Uniform Disk](images/a2/vis-uniform-disk.png height="240px") ![Uniform Sphere](images/a2/vis-uniform-sphere.png height="240px") ![Uniform Hemisphere](images/a2/vis-uniform-hemisphere.png height="240px")
+
+![Cosine Hemisphere](images/a2/vis-cosine-hemisphere.png height="240px") ![Beckmann $\alpha=0.1$](images/a2/vis-beckmann-0.1.png height="240px") ![Beckmann $\alpha=0.5$](images/a2/vis-beckmann-0.5.png height="240px") ![Beckmann $\alpha=0.9$](images/a2/vis-beckmann-0.9.png height="240px")
+
+And your code should pass the checks as well.
+
+# 3. Area Light (25pts)
+
+In Aris, we represent geometry with triangle meshes. When you cast a ray with `ray_intersect`, the returned `GeometryOutput` object has a `brdf_i` tensor. `brdf_i` stores the indices of the triangle meshes hit by the rays. For example, if the scene has 10 meshes, and the first ray hits the 3rd mesh, `brdf_i[0] == 2`.
+
+To model an area light, we associate it with one of the meshes. In this model, each triangle of the mesh uniformly emits radiance towards all directions in front of its surface (i.e. towards the hemisphere defined by the surface normal). Take a look at the `emitter/area.py` file. In the contructor of the `AreaLight` class, you can find the following arguments:
+
+- `radiance`, the radiance emitted by the triangles
+- `geometry`, the geometry representation of the scene
+- `i_primitive`, the index of the primitive (mesh) this area light belongs to
+- `i_emitter`, the index of this emitter in all emitters of the scene
+
+The constructor of the base class, `Emitter`, also updates the geometry instance so that we can check if a mesh is associated to an emitter.
+
+Your task for this part is to complete these three functions for area lights, which will later be used in the second part of this assignment:
+
+- `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object. For the probability densities, you should call the `pos_pdf` function below.
+- `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance. This function is only used by `sample` now but will become more useful in future assignments.
+- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set (see the comments of the `EmitterQuery` class for what these tensors are), compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit.
+
+  The `geometry` input is optional, and **the `le` function should check whether `points` and `targets` are mutually visible when `geometry` is not `None`**. The idea is that if the emitter points are sampled, it will be necessary to check visibility. However, if the points are already ray-traced (a ray bounced from an object and hit the emitter), the check won't be needed and `geometry` will be set to `None`.
+
+Hints:
+
+- Take a look at the uniform sampling functions already provided in the Geometry class. The `Geometry.uniform_sample` and `Geometry.uniform_sample_pos_pdf` (implemented in the `Mesh` class if you're interested) sample uniformly from a primitive and calculate the pdfs. Your area light `sample` and `pos_pdf` should simply call these functions and convert the results.
+- When you use the emitters later, remember to set all the required fields in `EmitterQuery`.
+
+## Verifying
+
+We provide an `emitter_check` integrator for checking if your area light implementation is correct.
+
+```bash
+python render.py scene=cbox scene/brdf=cbox_diffuse spp=256 integrator=emitter_check
 ```
-python render.py scene=ajax_simple integrator=ao spp=512
-```
+
+![cbox Emitter Checking](images/a3/cbox-emitter.png)
+
+Your rendering should look like the example, but you don't need to include this rendering in the report. Common issues in `le`:
+
+- Missing shadows: you should check whether `points` and `targets` are mutually visible
+- Bright ceiling: your should make sure that the area light only emits to the front (use surface normal)
+
 
 <style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
 <!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
