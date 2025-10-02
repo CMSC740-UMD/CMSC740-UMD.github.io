@@ -3,14 +3,14 @@
 
 **Assignment 3**
 
-_Advanced Computer Graphics (CMSC740), Fall 2024_
+_Advanced Computer Graphics (CMSC740), Fall 2025_
 
 In this assignment you'll implement:
 
-1. Area lights, a realistic type of light source that is associated with a mesh in the scene
-1. Distribution ray tracing
+1. Distribution ray tracing, including shading from area lights
 1. Dielectrics material for mirror reflection and refraction
 1. Whitted-style ray tracing
+1. Brute force path tracing
 
 ## Useful APIs
 
@@ -21,48 +21,7 @@ Here we list some APIs you may find helpful when coding the assignments.
 - `torch.nn.functional.normalize` normalizes tensors.
 - `torch.linalg.vector_norm` computes norms.
 
-# 1. Area Light (25pts)
-
-In Aris, we represent geometry with triangle meshes. When you cast a ray with `ray_intersect`, the returned `GeometryOutput` object has a `brdf_i` tensor. `brdf_i` stores the indices of the triangle meshes hit by the rays. For example, if the scene has 10 meshes, and the first ray hits the 3rd mesh, `brdf_i[0] == 2`.
-
-To model an area light, we associate it with one of the meshes. In this model, each triangle of the mesh uniformly emits radiance towards all directions in front of its surface (i.e. towards the hemisphere defined by the surface normal). Take a look at the `emitter/area.py` file. In the contructor of the `AreaLight` class, you can find the following arguments:
-
-- `radiance`, the radiance emitted by the triangles
-- `geometry`, the geometry representation of the scene
-- `i_primitive`, the index of the primitive (mesh) this area light belongs to
-- `i_emitter`, the index of this emitter in all emitters of the scene
-
-The constructor of the base class, `Emitter`, also updates the geometry instance so that we can check if a mesh is associated to an emitter.
-
-Your task for this part is to complete these three functions for area lights, which will later be used in the second part of this assignment:
-
-- `sample`, sample random points on the emitter mesh and store their information (the points, their normals, and their probability densities) in an `EmitterQuery` object. For the probability densities, you should call the `pos_pdf` function below.
-- `pos_pdf`, given an `EmitterQuery` with points already set, compute and set the probability densities of these points. The values would be the reciprocal of the area of the mesh because of uniform emittance. This function is only used by `sample` now but will become more useful in future assignments.
-- `le`, given an `EmitterQuery` with `points`, `normals`, `targets`, and `d_target_point` set (see the comments of the `EmitterQuery` class for what these tensors are), compute the Le term from points to targets and store it in `query.le`. Also, set `query.mask` to indicate which target points are lit.
-
-  The `geometry` input is optional, and **the `le` function should check whether `points` and `targets` are mutually visible when `geometry` is not `None`**. The idea is that if the emitter points are sampled, it will be necessary to check visibility. However, if the points are already ray-traced (a ray bounced from an object and hit the emitter), the check won't be needed and `geometry` will be set to `None`.
-
-Hints:
-
-- Take a look at the uniform sampling functions already provided in the Geometry class. The `Geometry.uniform_sample` and `Geometry.uniform_sample_pos_pdf` (implemented in the `Mesh` class if you're interested) sample uniformly from a primitive and calculate the pdfs. Your area light `sample` and `pos_pdf` should simply call these functions and convert the results.
-- When you use the emitters later, remember to set all the required fields in `EmitterQuery`.
-
-## Verifying
-
-We provide an `emitter_check` integrator for checking if your area light implementation is correct.
-
-```bash
-python render.py scene=cbox scene/brdf=cbox_diffuse spp=256 integrator=emitter_check
-```
-
-![cbox Emitter Checking](images/a3/cbox-emitter.png)
-
-Your rendering should look like the example, but you don't need to include this rendering in the report. Common issues in `le`:
-
-- Missing shadows: you should check whether `points` and `targets` are mutually visible
-- Bright ceiling: your should make sure that the area light only emits to the front (use surface normal)
-
-# 2. Distribution Ray Tracing (40pts)
+# 1. Distribution Ray Tracing (40pts)
 
 In the previous Point Light exercise, the model was:
 
@@ -163,7 +122,7 @@ You should decrease `spp` for debugging.
 
 ![cbox Distribution Ray Tracing](images/a3/cbox-dist.png)
 
-# 3. Dielectrics (25pts)
+# 2. Dielectrics (25pts)
 
 In this part, you'll implement a dielectric (refractive) `BRDF` class in `aris/brdf/dielectric.py`, based on Snell's law and the Fresnel equations. You'll need to produce random samples to choose between reflections and refractions.
 
@@ -176,7 +135,7 @@ Hints:
 - You may want to make Fresnel term computation an individual function (for future assignments).
 - You can also complete the next section (Whitted-style ray tracing) first, for example by making `dielectric` a mirror while debugging Whitted.
 
-# 4. Whitted-sytle Ray Tracing (10pts)
+# 3. Whitted-sytle Ray Tracing (10pts)
 
 Finally, with the specular materials implemented, you're ready to turn the distribution ray tracer into a Whitted-style ray tracer (named after Turner Whitted) which accounts for specular reflections and refractions.
 
@@ -204,6 +163,38 @@ python render.py scene=cbox scene/brdf=cbox spp=512 integrator=whitted
 Note: the extension does not change how diffuse surfaces are handled. Therefore, you will still produce the same result for part 2 (`cbox_diffuse`) after implementing this.
 
 ![cbox Whitted-style Ray Tracing](images/a3/cbox-whitted.png)
+
+# 4. Brute Force Path Tracer (15pts)
+
+In the last assignment you implemented the Whitted-style ray tracing that samples emitters when a diffuse surface is hit. To account for indirect illumination, we should also trace the rays that hit diffuse surfaces.
+
+As a starting point, we temporarily remove the emitter sampling part and rely purely on the rays hitting light sources by chance.
+
+Implement the "brute force" path tracer in `aris/integrators/path.py`. It's similar to your Whitted-style integrator and make use of `max_path_length` and `cont_prob`, with two differences:
+
+- Remove emitter sampling
+- Continue trace a ray as long as it hits a surface, regardless of diffuse / specular
+
+In the  `PathIntegrator` class, there are two additional attributes: `enable_emitter_sample` and `mis`. They're for enabling more complicated rendering strategies later. For "brute force", they're both set to false.
+
+Render with the following commands (for debugging, you may want to reduce the spp and/or scale):
+
+```
+python render.py integrator=path_bf scene=cbox spp=512
+python render.py integrator=path_bf scene=veach spp=256
+```
+
+!!! INFO
+    You can choose to continue or stop ray bouncing when it hits an emitter surface, according to your preference and convenience of coding. Your choice will make some small differences in the final rendering, and both are considered correct. We include reference renderings for both cases.
+
+Reference results 1:
+
+![cbox](images/a4/cbox-bf.png height="400px") ![veach](images/a4/veach-bf.png height="400px")
+
+Reference results 2:
+
+![cbox](images/a4/cbox-bf-v2.png height="400px") ![veach](images/a4/veach-bf-v2.png height="400px")
+
 
 <style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>
 <!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
